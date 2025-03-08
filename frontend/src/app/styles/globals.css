@@ -33,3 +33,69 @@ body {
 .bg-light {
   background: var(--backgroundLight);
 }
+
+.styled-button-red {
+  position: relative;
+  display: inline-block;
+  padding: 15px 30px;
+  font-size: 18px;
+  font-weight: bolder;
+  color: #FFFFFF;
+  background: linear-gradient(45deg, #d11a1a, #e63939);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(225, 29, 72, 0.5);
+  text-decoration: none;
+}
+
+.styled-button-red::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 150%;
+  height: 100%;
+  background: linear-gradient(120deg,
+          rgba(255, 255, 255, 0.3),
+          rgba(255, 255, 255, 0));
+  transform: skewX(-20deg);
+  transition: all 0.3s ease;
+  animation: shine 3s linear infinite;
+  filter: blur(8px);
+  pointer-events: none;
+  mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 25%, rgba(0, 0, 0, 0) 100%);
+  -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 25%, rgba(0, 0, 0, 0) 100%);
+}
+
+.styled-button-red:hover {
+  background: linear-gradient(45deg, #B22222, #FF4444);
+  box-shadow: 0 6px 20px rgba(255, 0, 0, 0.7);
+}
+
+.styled-button-red:hover::before {
+  left: 0;
+}
+
+@keyframes shine {
+  0% { left: -150%; }
+  40% { left: 100%; }
+  100% { left: 150%; }
+}
+
+.marquee-container {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+}
+
+.marquee-content {
+  will-change: transform;
+  display: flex;
+}
+

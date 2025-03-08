@@ -1,12 +1,13 @@
 import { services } from '@/lib/constants'
 import { Transition } from '@headlessui/react'
-import SectionTitle from './SectionTitle' // Importe o componente
+import SectionTitle from './SectionTitle' 
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 export default function ServicesSection() {
     return (
         <section id="servicos" className="py-16">
             <div className="max-w-7xl mx-auto px-4">
-                {/* Use o componente SectionTitle */}
+                
                 <SectionTitle
                     subtitle="Serviços"
                     title="O que fazemos?"
@@ -22,10 +23,12 @@ export default function ServicesSection() {
                             enterFrom="opacity-0"
                             enterTo="opacity-100"
                         >
-                            <div className="p-8 bg-white rounded-2xl cursor-pointer hover:bg-gray-900 hover:text-white transition-colors relative">
-                                <div className="text-blue-600 text-4xl mb-4">{service.icon}</div>
+                            <div className="p-8 bg-white rounded-2xl cursor-pointer hover:bg-gray-900 hover:text-white transition-colors relative h-84">
+                                <div className="text-gray-600 text-5xl mb-6">
+                                    <FontAwesomeIcon icon={service.icon} />
+                                </div>
                                 <h3 className="text-xl font-semibold mb-2">{service.title}</h3>
-                                <p className="text-gray-600">{service.description}</p>
+                                <p className="opacity-60">{service.description}</p>
                                 <div className="absolute bottom-6 left-6 w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
                                     <svg
                                         className="w-6 h-6 text-gray-700"

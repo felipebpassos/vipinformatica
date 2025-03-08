@@ -1,32 +1,41 @@
+import { 
+  faDesktop,
+  faLaptopCode,
+  faServer,
+  faMobileAlt,
+  faCog,
+  faFingerprint
+} from '@fortawesome/free-solid-svg-icons';
+
 // Ícones podem ser substituídos por SVG ou componentes de biblioteca
 export const services = [
     {
-        icon: '🛠️',
+        icon: faDesktop,
         title: 'Suporte Técnico',
         description: 'Manutenção de computadores e notebooks, incluindo formatação, instalação de programas e equipamentos digitais.'
     },
     {
-        icon: '💻',
+        icon: faLaptopCode,
         title: 'Criação de Sites',
         description: 'Desenvolvimento de sites responsivos, rápidos e otimizados para SEO, garantindo uma presença digital profissional.'
     },
     {
-        icon: '📡',
+        icon: faServer,
         title: 'Consultoria em TI',
-        description: 'Instalação e manutenção de servidores e sistemas, garantindo infraestrutura segura e de alto desempenho para sua empresa.'
+        description: 'Instalação e manutenção de servidores, redes e sistemas, garantindo infraestrutura segura e de alto desempenho para sua empresa.'
     },
     {
-        icon: '📱',
+        icon: faMobileAlt,
         title: 'Desenvolvimento de Aplicativos',
         description: 'Aplicações móveis Android e iOS sob medida, focadas em usabilidade e funcionalidade.'
     },
     {
-        icon: '⚙️',
+        icon: faCog,
         title: 'Sistemas Web',
-        description: 'Desenvolvimento e integração de sistemas web personalizados para otimizar processos, automatizar tarefas e conectar diferentes plataformas de forma eficiente.'
+        description: 'Desenvolvimento e integração de sistemas web para otimizar processos, automatizar tarefas e conectar diferentes plataformas de forma eficiente.'
     },    
     {
-        icon: '🔒',
+        icon: faFingerprint,
         title: 'Segurança Digital',
         description: 'Implementação de soluções de segurança, monitoramento de ameaças e proteção contra ataques cibernéticos.'
     }
