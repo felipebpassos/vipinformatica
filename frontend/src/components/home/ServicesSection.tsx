@@ -1,6 +1,6 @@
 import { services } from '@/lib/constants'
 import { Transition } from '@headlessui/react'
-import SectionTitle from './SectionTitle' 
+import SectionTitle from '../SectionTitle' 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 export default function ServicesSection() {
@@ -23,8 +23,8 @@ export default function ServicesSection() {
                             enterFrom="opacity-0"
                             enterTo="opacity-100"
                         >
-                            <div className="p-8 bg-white rounded-2xl cursor-pointer hover:bg-gray-900 hover:text-white transition-colors relative h-84">
-                                <div className="text-gray-600 text-5xl mb-6">
+                            <div className="group p-8 bg-white rounded-2xl cursor-pointer hover:bg-gray-900 hover:text-white transition-colors relative h-84">
+                                <div className="text-gray-600 text-5xl mb-6 group-hover:text-gray-400">
                                     <FontAwesomeIcon icon={service.icon} />
                                 </div>
                                 <h3 className="text-xl font-semibold mb-2">{service.title}</h3>

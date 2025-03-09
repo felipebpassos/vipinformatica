@@ -4,7 +4,7 @@ import Image from 'next/image';
 
 export default function Footer() {
     return (
-        <footer className="bg-light text-white">
+        <footer id="footer" className="bg-light text-white">
             {/* Google Maps Embed */}
             <div className="w-full h-64">
                 <iframe
@@ -52,14 +52,13 @@ export default function Footer() {
                     <ul className="space-y-2">
                         <li><a href="#" className="hover:text-gray-800">Início</a></li>
                         <li><a href="#" className="hover:text-gray-800">Serviços</a></li>
-                        <li><a href="#" className="hover:text-gray-800">Procedimento</a></li>
+                        <li><a href="#" className="hover:text-gray-800">Portfolio</a></li>
                     </ul>
                 </div>
 
                 {/* Center Right */}
                 <div className="text-gray-600">
                     <ul className="space-y-2">
-                        <li><a href="#" className="hover:text-gray-800">Portfolio</a></li>
                         <li><a href="#" className="hover:text-gray-800">Minha conta</a></li>
                         <li><a href="#" className="hover:text-gray-800">Atendimento</a></li>
                     </ul>

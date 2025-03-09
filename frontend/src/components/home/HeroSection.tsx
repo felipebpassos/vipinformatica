@@ -19,7 +19,7 @@ export default function HeroSection() {
                 </p>
 
                 {/* Container principal alinhado ao centro */}
-                <div className="flex flex-col m-auto w-fit">
+                <div className="flex flex-col m-auto w-fit py-2 px-4 bg-white/5 rounded-md">
 
                     {/* Box do ícone + texto alinhado à esquerda */}
                     <div className="mb-2">
@@ -34,10 +34,10 @@ export default function HeroSection() {
 
                     {/* Botão */}
                     <Link
-                        href="/ticket-bot"
+                        href="/chat"
                         className="styled-button-red"
                     >
-                        Fale com um especialista
+                        Precisando de suporte?
                     </Link>
                 </div>
             </div>

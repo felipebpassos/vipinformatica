@@ -26,16 +26,16 @@ export default function Header() {
                                 Serviços
                             </Link>
                             <Link 
-                                href="#procedimento" 
-                                className="px-4 py-2 rounded-md hover:bg-gray-200 active:bg-gray-300 transition text-gray-600"
-                            >
-                                Procedimento
-                            </Link>
-                            <Link 
                                 href="/portfolio" 
                                 className="px-4 py-2 rounded-md hover:bg-gray-200 active:bg-gray-300 transition text-gray-600"
                             >
                                 Portfolio
+                            </Link>
+                            <Link 
+                                href="#footer" 
+                                className="px-4 py-2 rounded-md hover:bg-gray-200 active:bg-gray-300 transition text-gray-600"
+                            >
+                                Contato
                             </Link>
                         </div>
                         

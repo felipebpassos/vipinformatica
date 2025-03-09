@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { clients } from '@/lib/constants'
-import SectionTitle from './SectionTitle'
+import SectionTitle from '../SectionTitle'
 
 export default function ClientsSection() {
     const [speedTop, setSpeedTop] = useState(1)
