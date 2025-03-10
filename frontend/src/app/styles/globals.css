@@ -70,8 +70,8 @@ body {
   width: 150%;
   height: 100%;
   background: linear-gradient(120deg,
-          rgba(255, 255, 255, 0.3),
-          rgba(255, 255, 255, 0));
+      rgba(255, 255, 255, 0.3),
+      rgba(255, 255, 255, 0));
   transform: skewX(-20deg);
   transition: all 0.3s ease;
   animation: shine 3s linear infinite;
@@ -91,22 +91,39 @@ body {
 }
 
 @keyframes shine {
-  0% { left: -150%; }
-  40% { left: 100%; }
-  100% { left: 150%; }
+  0% {
+    left: -150%;
+  }
+
+  40% {
+    left: 100%;
+  }
+
+  100% {
+    left: 150%;
+  }
 }
 
 .marquee-container {
   width: 100vw;
   position: relative;
-  left: 50%;
-  right: 50%;
-  margin-left: -50vw;
-  margin-right: -50vw;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .marquee-content {
   will-change: transform;
-  display: flex;
+  user-select: none;
+  /* Esconde a barra de rolagem padrão */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* Internet Explorer e Edge */
+  list-style: none;
 }
 
+.marquee-content img {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}

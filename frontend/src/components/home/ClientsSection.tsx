@@ -1,4 +1,3 @@
-// ClientsSection.tsx
 "use client"
 import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
@@ -7,42 +6,67 @@ import SectionTitle from '../SectionTitle'
 
 export default function ClientsSection() {
     const [speedTop, setSpeedTop] = useState(1)
-    const [speedBottom, setSpeedBottom] = useState(-1)
+    const [speedBottom, setSpeedBottom] = useState(1) // Alterado para positivo
     const animationRefs = useRef<Animation[]>([])
     const isDragging = useRef(false)
     const startX = useRef(0)
-    const currentSpeed = useRef({ top: 1, bottom: -1 })
+    const currentSpeed = useRef({ top: 1, bottom: 1 })
     const activeLine = useRef<'top' | 'bottom' | null>(null)
+    const resizeObservers = useRef<ResizeObserver[]>([])
 
     useEffect(() => {
         const elements = document.querySelectorAll('.marquee-content')
 
         elements.forEach((el, index) => {
-            // Calcula a duração baseada na largura do conteúdo
-            const contentWidth = el.scrollWidth
-            const viewportWidth = window.innerWidth
-            const duration = (contentWidth / viewportWidth) * 25000 
+            const updateAnimation = () => {
+                const contentWidth = el.scrollWidth
+                const viewportWidth = window.innerWidth
+                const duration = (contentWidth / viewportWidth) * 40000 // Reduzido o multiplicador
 
-            const animation = el.animate(
-                [
-                    { transform: 'translateX(0%)' },
-                    { transform: `translateX(-${contentWidth / 2}px)` }
-                ],
-                {
+                // Define os keyframes com base na linha
+                const keyframes = index === 0
+                    ? [
+                        { transform: 'translateX(0px)' },
+                        { transform: `translateX(-${contentWidth / 2}px)` }
+                    ]
+                    : [
+                        { transform: `translateX(-${contentWidth / 2}px)` },
+                        { transform: 'translateX(0px)' }
+                    ]
+
+                // Cancela animação existente
+                if (animationRefs.current[index]) {
+                    animationRefs.current[index].cancel()
+                }
+
+                // Cria nova animação
+                const animation = el.animate(keyframes, {
                     duration: duration,
                     iterations: Infinity
-                }
-            )
-            animation.playbackRate = index === 0 ? speedTop : speedBottom
-            animationRefs.current.push(animation)
+                })
+
+                animation.playbackRate = index === 0 ? speedTop : speedBottom
+                animationRefs.current[index] = animation
+            }
+
+            // Observador de redimensionamento
+            const resizeObserver = new ResizeObserver(updateAnimation)
+            resizeObserver.observe(el)
+            resizeObservers.current.push(resizeObserver)
+
+            // Atualização inicial
+            updateAnimation()
         })
 
-        return () => animationRefs.current.forEach(anim => anim.cancel())
+        return () => {
+            animationRefs.current.forEach(anim => anim?.cancel())
+            resizeObservers.current.forEach(observer => observer.disconnect())
+        }
     }, [])
 
     useEffect(() => {
-        animationRefs.current[0] && (animationRefs.current[0].playbackRate = speedTop)
-        animationRefs.current[1] && (animationRefs.current[1].playbackRate = speedBottom)
+        animationRefs.current[0]?.playbackRate !== undefined && (animationRefs.current[0].playbackRate = speedTop)
+        animationRefs.current[1]?.playbackRate !== undefined && (animationRefs.current[1].playbackRate = speedBottom)
     }, [speedTop, speedBottom])
 
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
@@ -91,7 +115,7 @@ export default function ClientsSection() {
     }
 
     return (
-        <section className="py-16 overflow-hidden w-full">
+        <section className="py-32 overflow-hidden w-full">
             <div className="px-4 w-full">
                 <SectionTitle
                     title="Parceiros que confiam em nosso trabalho"
@@ -104,10 +128,18 @@ export default function ClientsSection() {
                 >
                     {/* Linha superior - Aumenta o número de cópias */}
                     <div className="marquee-container top-line overflow-hidden w-full">
-                        <div className="marquee-content flex w-max gap-8">
+                        <div className="marquee-content flex w-max gap-20">
                             {[...clients, ...clients, ...clients, ...clients].map((client, i) => (
-                                <div key={`top-${i}`} className="relative h-20 w-40 flex-shrink-0 grayscale hover:grayscale-0 transition-all">
-                                    <Image src={client.logo} alt={client.alt} fill className="object-contain" />
+                                <div
+                                    key={`top-${i}`}
+                                    className="relative h-30 w-50 flex-shrink-0 transition-all rounded-3xl overflow-hidden"
+                                >
+                                    <Image
+                                        src={client.logo}
+                                        alt={client.alt}
+                                        fill
+                                        className="object-contain"
+                                    />
                                 </div>
                             ))}
                         </div>
@@ -115,10 +147,18 @@ export default function ClientsSection() {
 
                     {/* Linha inferior - Aumenta o número de cópias */}
                     <div className="marquee-container bottom-line overflow-hidden w-full">
-                        <div className="marquee-content flex w-max gap-8">
+                        <div className="marquee-content flex w-max gap-20">
                             {[...clients, ...clients, ...clients, ...clients].map((client, i) => (
-                                <div key={`bottom-${i}`} className="relative h-20 w-40 flex-shrink-0 grayscale hover:grayscale-0 transition-all">
-                                    <Image src={client.logo} alt={client.alt} fill className="object-contain" />
+                                <div
+                                    key={`bottom-${i}`}
+                                    className="relative h-30 w-50 flex-shrink-0 transition-all rounded-3xl overflow-hidden"
+                                >
+                                    <Image
+                                        src={client.logo}
+                                        alt={client.alt}
+                                        fill
+                                        className="object-contain"
+                                    />
                                 </div>
                             ))}
                         </div>

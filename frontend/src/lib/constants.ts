@@ -43,12 +43,40 @@ export const services = [
 
 export const clients = [
     {
-        logo: '/images/clients/empresa1.png',
+        logo: '/clients/cliente01.jpeg',
         alt: 'Logo Empresa 1'
     },
     {
-        logo: '/images/clients/empresa2.png',
-        alt: 'Logo Empresa 2'
+        logo: '/clients/cliente02.jpeg',
+        alt: 'Logo Empresa 1'
+    },
+    {
+        logo: '/clients/cliente03.jpeg',
+        alt: 'Logo Empresa 1'
+    },
+    {
+        logo: '/clients/cliente04.jpeg',
+        alt: 'Logo Empresa 1'
+    },
+    {
+        logo: '/clients/cliente05.jpeg',
+        alt: 'Logo Empresa 1'
+    },
+    {
+        logo: '/clients/cliente06.jpeg',
+        alt: 'Logo Empresa 1'
+    },
+    {
+        logo: '/clients/cliente07.jpeg',
+        alt: 'Logo Empresa 1'
+    },
+    {
+        logo: '/clients/cliente08.jpeg',
+        alt: 'Logo Empresa 1'
+    },
+    {
+        logo: '/clients/cliente09.jpeg',
+        alt: 'Logo Empresa 1'
     },
     // Adicione mais clientes...
 ]
