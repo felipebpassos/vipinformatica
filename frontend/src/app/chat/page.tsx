@@ -167,7 +167,7 @@ export default function TicketPage() {
                                     <img
                                         src="chat-man.webp"
                                         className="w-full h-full object-cover rounded-full"
-                                        alt="Logo da empresa"
+                                        alt="Atendente"
                                     />
                                 </div>
                             </div>

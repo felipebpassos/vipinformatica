@@ -42,13 +42,13 @@ export default function CookieBanner() {
             <div className="flex flex-col sm:flex-row gap-2 mt-4 w-full">
                 <button
                     onClick={handleAccept}
-                    className="bg-black text-white py-3 px-4 rounded-lg flex-1 font-bold"
+                    className="bg-black hover:bg-gray-900 text-white py-3 px-4 cursor-pointer rounded-lg flex-1 font-bold"
                 >
                     Aceitar cookies
                 </button>
                 <button
                     onClick={handleReject}
-                    className="bg-gray-200 text-gray-800 py-3 px-4 rounded-lg flex-1 font-bold"
+                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 px-4 cursor-pointer rounded-lg flex-1 font-bold"
                 >
                     Recusar
                 </button>

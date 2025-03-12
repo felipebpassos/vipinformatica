@@ -17,7 +17,7 @@ export function Options({
                 <button
                     key={option}
                     onClick={() => onSelect(option)}
-                    className="bg-gray-800 hover:bg-gray-700 rounded-lg px-4 py-2 w-fit cursor-pointer text-sm sm:text-base flex items-center gap-2"
+                    className="bg-gray-800 hover:bg-gray-700 rounded-lg px-4 py-2 w-fit cursor-pointer text-sm sm:text-base flex items-center gap-2 whitespace-nowrap"
                 >
                     {option === 'Falar com atendimento' && (
                         <FontAwesomeIcon icon={faWhatsapp} className="text-green-500" />
