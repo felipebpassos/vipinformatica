@@ -6,7 +6,7 @@ export default function HeroSection() {
     return (
         <section
             className="relative text-white px-4 bg-cover bg-center flex items-center justify-center min-h-[max(600px,70vh)]"
-            style={{ backgroundImage: "url('/technology_office.png')" }}
+            style={{ backgroundImage: "url('/technology_office.webp')" }}
         >
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-black/70 z-0" />
 

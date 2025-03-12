@@ -1,6 +1,5 @@
 "use client"
 import { useState, useRef, useEffect } from 'react'
-import Image from 'next/image'
 import { clients } from '@/lib/constants'
 import SectionTitle from '../SectionTitle'
 
@@ -55,9 +54,13 @@ export default function ClientsSection() {
     }, [])
 
     useEffect(() => {
-        animationRefs.current[0]?.playbackRate !== undefined && (animationRefs.current[0].playbackRate = speedTop)
-        animationRefs.current[1]?.playbackRate !== undefined && (animationRefs.current[1].playbackRate = speedBottom)
-    }, [speedTop, speedBottom])
+        if (animationRefs.current[0]?.playbackRate !== undefined) {
+            animationRefs.current[0].playbackRate = speedTop;
+        }
+        if (animationRefs.current[1]?.playbackRate !== undefined) {
+            animationRefs.current[1].playbackRate = speedBottom;
+        }
+    }, [speedTop, speedBottom])    
 
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
         isDragging.current = true
@@ -121,10 +124,9 @@ export default function ClientsSection() {
                                     key={`top-${i}`}
                                     className="relative h-30 w-50 flex-shrink-0 transition-all rounded-3xl overflow-hidden"
                                 >
-                                    <Image
+                                    <img
                                         src={client.logo}
                                         alt={client.alt}
-                                        fill
                                         className="object-contain"
                                         sizes="(max-width: 768px) 100px, 200px"
                                     />
@@ -141,10 +143,9 @@ export default function ClientsSection() {
                                     key={`bottom-${i}`}
                                     className="relative h-30 w-50 flex-shrink-0 transition-all rounded-3xl overflow-hidden"
                                 >
-                                    <Image
+                                    <img
                                         src={client.logo}
                                         alt={client.alt}
-                                        fill
                                         className="object-contain"
                                         sizes="(max-width: 768px) 100px, 200px"
                                     />

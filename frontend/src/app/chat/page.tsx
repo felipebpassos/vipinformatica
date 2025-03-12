@@ -116,6 +116,12 @@ export default function TicketPage() {
         setShowInputOrOptions(false) // Oculta inputs/opções até a animação terminar
     }
 
+    useEffect(() => {
+        console.log(selectedService)
+        console.log(name)
+        console.log(email)
+    }, [selectedService, name, email])
+
     return (
         <div className="max-w-3xl mx-auto px-6 pb-12 pt-40">
             <div className="flex-1 space-y-4">

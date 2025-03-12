@@ -1,7 +1,6 @@
 "use client";
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 export default function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -12,12 +11,11 @@ export default function Header() {
                 <div className="flex justify-between h-16 items-center">
                     {/* Logo */}
                     <Link href="/">
-                        <Image
+                        <img
                             src="/logo.png"
                             alt="Vip Informática Logo"
                             width={150}
                             height={50}
-                            priority
                         />
                     </Link>
 
