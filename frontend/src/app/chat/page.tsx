@@ -68,7 +68,7 @@ export default function TicketPage() {
     }, [messageHistory])
 
     const handleServiceSelect = (service: string) => {
-        if (service === 'Falar com atendente') {
+        if (service === 'Falar com atendimento') {
             window.location.href = 'https://wa.me/557996761012'
             return
         }

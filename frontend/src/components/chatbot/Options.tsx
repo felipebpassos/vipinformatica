@@ -1,6 +1,9 @@
 // components/chatbot/Options.tsx
 'use client'
 
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faWhatsapp } from '@fortawesome/free-brands-svg-icons' // Ícone de WhatsApp
+
 export function Options({
     options,
     onSelect
@@ -14,12 +17,14 @@ export function Options({
                 <button
                     key={option}
                     onClick={() => onSelect(option)}
-                    className="bg-gray-800 hover:bg-gray-700 rounded-lg px-4 py-2 w-fit cursor-pointer"
+                    className="bg-gray-800 hover:bg-gray-700 rounded-lg px-4 py-2 w-fit cursor-pointer text-sm sm:text-base flex items-center gap-2"
                 >
-                    {option}
+                    {option === 'Falar com atendimento' && (
+                        <FontAwesomeIcon icon={faWhatsapp} className="text-green-500" />
+                    )}
+                    {option} {/* Exibe o texto da opção */}
                 </button>
             ))}
         </div>
     )
 }
-

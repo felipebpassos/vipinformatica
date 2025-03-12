@@ -13,7 +13,7 @@ export default function ServicesSection() {
                     title="O que fazemos?"
                 />
 
-                <div className="grid md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {services.map((service, index) => (
                         <Transition
                             key={service.title}
@@ -24,7 +24,7 @@ export default function ServicesSection() {
                             enterTo="opacity-100"
                         >
                             <div className="group p-8 bg-white rounded-2xl cursor-pointer hover:bg-gray-900 hover:text-white transition-colors relative h-84">
-                                <div className="text-gray-600 text-5xl mb-6 group-hover:text-gray-400">
+                                <div className="text-gray-600 text-4xl md:text-5xl mb-6 group-hover:text-gray-400">
                                     <FontAwesomeIcon icon={service.icon} />
                                 </div>
                                 <h3 className="text-xl font-semibold mb-2">{service.title}</h3>

@@ -5,41 +5,34 @@ import { clients } from '@/lib/constants'
 import SectionTitle from '../SectionTitle'
 
 export default function ClientsSection() {
-    const [speedTop, setSpeedTop] = useState(1)
-    const [speedBottom, setSpeedBottom] = useState(1) // Alterado para positivo
+    const [speedTop, setSpeedTop] = useState(1) // Velocidade inicial da linha de cima
+    const [speedBottom, setSpeedBottom] = useState(-1) // Velocidade inicial da linha de baixo (negativa para direção oposta)
     const animationRefs = useRef<Animation[]>([])
     const isDragging = useRef(false)
     const startX = useRef(0)
-    const currentSpeed = useRef({ top: 1, bottom: 1 })
+    const currentSpeed = useRef({ top: 1, bottom: -1 }) // Valores iniciais correspondentes
     const activeLine = useRef<'top' | 'bottom' | null>(null)
     const resizeObservers = useRef<ResizeObserver[]>([])
+    const topContentRef = useRef<HTMLDivElement>(null)
+    const bottomContentRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        const elements = document.querySelectorAll('.marquee-content')
+        const elements = [topContentRef.current, bottomContentRef.current].filter(Boolean) as HTMLDivElement[]
 
         elements.forEach((el, index) => {
             const updateAnimation = () => {
                 const contentWidth = el.scrollWidth
-                const viewportWidth = window.innerWidth
-                const duration = (contentWidth / viewportWidth) * 40000 // Reduzido o multiplicador
+                const duration = (contentWidth / window.innerWidth) * 20000 // Ajuste o multiplicador para controlar a velocidade base
 
-                // Define os keyframes com base na linha
-                const keyframes = index === 0
-                    ? [
-                        { transform: 'translateX(0px)' },
-                        { transform: `translateX(-${contentWidth / 2}px)` }
-                    ]
-                    : [
-                        { transform: `translateX(-${contentWidth / 2}px)` },
-                        { transform: 'translateX(0px)' }
-                    ]
+                const keyframes = [
+                    { transform: 'translateX(0)' },
+                    { transform: `translateX(-${contentWidth / 2}px)` }
+                ]
 
-                // Cancela animação existente
                 if (animationRefs.current[index]) {
                     animationRefs.current[index].cancel()
                 }
 
-                // Cria nova animação
                 const animation = el.animate(keyframes, {
                     duration: duration,
                     iterations: Infinity
@@ -49,12 +42,9 @@ export default function ClientsSection() {
                 animationRefs.current[index] = animation
             }
 
-            // Observador de redimensionamento
             const resizeObserver = new ResizeObserver(updateAnimation)
             resizeObserver.observe(el)
             resizeObservers.current.push(resizeObserver)
-
-            // Atualização inicial
             updateAnimation()
         })
 
@@ -77,10 +67,7 @@ export default function ClientsSection() {
         if (container) {
             activeLine.current = container.classList.contains('top-line') ? 'top' : 'bottom'
             startX.current = 'touches' in e ? e.touches[0].clientX : e.clientX
-            currentSpeed.current = {
-                top: speedTop,
-                bottom: speedBottom
-            }
+            currentSpeed.current = { top: speedTop, bottom: speedBottom }
         }
 
         document.addEventListener('mousemove', handleDrag)
@@ -94,13 +81,13 @@ export default function ClientsSection() {
         e.preventDefault()
 
         const currentX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX
-        const delta = (currentX - startX.current) * 0.015
+        const delta = (startX.current - currentX) * 0.015 // Corrigido: invertido o cálculo do delta
 
         if (activeLine.current === 'top') {
-            const newSpeed = currentSpeed.current.top - delta
+            const newSpeed = currentSpeed.current.top + delta
             setSpeedTop(Math.min(Math.max(newSpeed, -3), 3))
         } else {
-            const newSpeed = currentSpeed.current.bottom - delta
+            const newSpeed = currentSpeed.current.bottom + delta
             setSpeedBottom(Math.min(Math.max(newSpeed, -3), 3))
         }
     }
@@ -126,10 +113,10 @@ export default function ClientsSection() {
                     onMouseDown={handleDragStart}
                     onTouchStart={handleDragStart}
                 >
-                    {/* Linha superior - Aumenta o número de cópias */}
+                    {/* Linha superior */}
                     <div className="marquee-container top-line overflow-hidden w-full">
-                        <div className="marquee-content flex w-max gap-20">
-                            {[...clients, ...clients, ...clients, ...clients].map((client, i) => (
+                        <div ref={topContentRef} className="marquee-content flex w-max gap-20">
+                            {[...clients, ...clients].map((client, i) => (
                                 <div
                                     key={`top-${i}`}
                                     className="relative h-30 w-50 flex-shrink-0 transition-all rounded-3xl overflow-hidden"
@@ -139,16 +126,17 @@ export default function ClientsSection() {
                                         alt={client.alt}
                                         fill
                                         className="object-contain"
+                                        sizes="(max-width: 768px) 100px, 200px"
                                     />
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Linha inferior - Aumenta o número de cópias */}
+                    {/* Linha inferior */}
                     <div className="marquee-container bottom-line overflow-hidden w-full">
-                        <div className="marquee-content flex w-max gap-20">
-                            {[...clients, ...clients, ...clients, ...clients].map((client, i) => (
+                        <div ref={bottomContentRef} className="marquee-content flex w-max gap-20">
+                            {[...clients, ...clients].map((client, i) => (
                                 <div
                                     key={`bottom-${i}`}
                                     className="relative h-30 w-50 flex-shrink-0 transition-all rounded-3xl overflow-hidden"
@@ -158,6 +146,7 @@ export default function ClientsSection() {
                                         alt={client.alt}
                                         fill
                                         className="object-contain"
+                                        sizes="(max-width: 768px) 100px, 200px"
                                     />
                                 </div>
                             ))}

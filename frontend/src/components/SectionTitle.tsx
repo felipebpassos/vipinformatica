@@ -23,7 +23,7 @@ export default function SectionTitle({ subtitle, title, maxTitleLength = 25 }: S
             {/* Renderiza o subtítulo apenas se for passado */}
             {subtitle && (
                 <div className="inline-block bg-gray-300/40 px-4 py-2 rounded-lg">
-                    <span className="block text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                    <span className="block text-xs md:text-sm lg:text-base font-semibold text-gray-600 uppercase tracking-wider">
                         {subtitle}
                     </span>
                 </div>
@@ -31,7 +31,7 @@ export default function SectionTitle({ subtitle, title, maxTitleLength = 25 }: S
 
             {/* Renderiza o título apenas se for passado */}
             {title && (
-                <h1 className={`mt-4 text-5xl font-extrabold text-gray-800 ${subtitle ? '' : 'mt-0'} whitespace-pre-line`}>
+                <h1 className={`mt-4 text-2xl md:text-4xl lg:text-5xl font-extrabold text-gray-800 ${subtitle ? '' : 'mt-0'} whitespace-pre-line`}>
                     {formattedTitle}
                 </h1>
             )}

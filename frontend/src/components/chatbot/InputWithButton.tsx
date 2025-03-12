@@ -36,7 +36,7 @@ export function InputWithButton({
                 />
                 <button
                     onClick={handleSubmit}
-                    className="bg-blue-600 hover:bg-blue-700 rounded-lg py-2 px-4 cursor-pointer"
+                    className="bg-blue-600 hover:bg-blue-700 rounded-lg py-2 px-4 cursor-pointer text-sm sm:text-base"
                 >
                     {buttonText}
                 </button>
@@ -44,3 +44,4 @@ export function InputWithButton({
         </div>
     )
 }
+

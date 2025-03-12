@@ -153,9 +153,11 @@
 @media (max-width: 700px) {
     .whatsapp-box {
         right: 20px;
+        bottom: 20px;
     }
 
     .message-box {
         right: 20px;
+        bottom: 92px;
     }
 }
