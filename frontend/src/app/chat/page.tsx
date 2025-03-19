@@ -1,4 +1,3 @@
-// app/chat/page.tsx
 'use client'
 
 import { useState, useEffect, useMemo, Fragment } from 'react'
@@ -14,8 +13,46 @@ const services = [
     'Falar com atendimento'
 ]
 
+// Service explanations - removed the prompt at the end
+const serviceExplanations = {
+    'Manutenção e conserto de equipamentos':
+        'Ótimo!\n\n' +
+        'Nosso serviço de manutenção e conserto de equipamentos funciona da seguinte forma:\n\n' +
+        '1. Primeiramente, realizamos uma avaliação técnica do seu equipamento para identificar todos os problemas.\n' +
+        '2. Em seguida, apresentamos um orçamento detalhado para sua aprovação.\n' +
+        '3. Após aprovação, iniciamos os reparos necessários utilizando peças de qualidade.\n' +
+        '4. Finalizamos com testes completos para garantir o funcionamento perfeito.',
+
+    'Formatação e instalação de programas':
+        'Ótimo!\n\n' +
+        'Nosso serviço de formatação e instalação de programas segue estas etapas:\n\n' +
+        '1. Realizamos um backup dos seus arquivos importantes (quando solicitado).\n' +
+        '2. Formatamos o dispositivo e instalamos o sistema operacional de sua preferência.\n' +
+        '3. Configuramos drivers e programas essenciais (antivírus, pacote office, navegadores, etc).\n' +
+        '4. Finalizamos com uma verificação completa para garantir o funcionamento adequado.',
+
+    'Desenvolvimento de sites e sistemas':
+        'Ótimo!\n\n' +
+        'Nosso processo de desenvolvimento de sites e sistemas inclui as seguintes fases:\n\n' +
+        '1. Realizamos uma reunião de alinhamento para levantamento de requisitos, entendendo suas necessidades e objetivos.\n' +
+        '2. Apresentamos uma proposta detalhada com prazos e valores para sua aprovação.\n' +
+        '3. Após o fechamento, iniciamos o desenvolvimento com atualizações regulares sobre o progresso.\n' +
+        '4. Entregamos o projeto finalizado com suporte para ajustes e melhorias.',
+
+    'Consultoria em TI':
+        'Ótimo!\n\n' +
+        'Nossa consultoria em TI funciona da seguinte maneira:\n\n' +
+        '1. Iniciamos com uma reunião diagnóstica para entender os desafios e necessidades da sua empresa.\n' +
+        '2. Elaboramos um plano estratégico personalizado com soluções e recomendações.\n' +
+        '3. Apresentamos o plano de ação com orçamento e cronograma para implementação.\n' +
+        '4. Acompanhamos a implementação das soluções e fornecemos suporte contínuo.'
+}
+
+// Common message for all services
+const continuePrompt = 'Para prosseguir, precisaremos de algumas informações como nome, email e whatsapp para que um de nossos especialistas possa entrar em contato. Deseja continuar?'
+
 export default function TicketPage() {
-    const [step, setStep] = useState<'options' | 'name' | 'email' | 'done'>('options')
+    const [step, setStep] = useState<'options' | 'serviceConfirm' | 'name' | 'email' | 'whatsapp' | 'done'>('options')
     const [messageHistory, setMessageHistory] = useState([
         {
             content: 'Olá! 😊 Seja muito bem-vindo(a) ao atendimento da VIP.com Informática!\n\nSe precisar de suporte técnico, orçamentos ou qualquer outra coisa, é só me avisar! Estou aqui para ajudar.',
@@ -26,8 +63,9 @@ export default function TicketPage() {
     const [selectedService, setSelectedService] = useState('')
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
-    const [isTyping, setIsTyping] = useState(false) // Controla o estado de digitação
-    const [showInputOrOptions, setShowInputOrOptions] = useState(false) // Controla a exibição de inputs/opções
+    const [whatsapp, setWhatsapp] = useState('')
+    const [isTyping, setIsTyping] = useState(false)
+    const [showInputOrOptions, setShowInputOrOptions] = useState(false)
 
     const groupedMessages = useMemo(() => {
         const groups: typeof messageHistory[] = []
@@ -46,23 +84,21 @@ export default function TicketPage() {
         return groups
     }, [messageHistory])
 
-    // Efeito para controlar o indicador de digitação e exibição de inputs/opções
     useEffect(() => {
         const lastGroup = groupedMessages[groupedMessages.length - 1]
         if (lastGroup && !lastGroup[0].isUser) {
             setIsTyping(true)
             const timer = setTimeout(() => {
                 setIsTyping(false)
-                setShowInputOrOptions(true) // Mostra inputs/opções após a animação
-            }, 1500) // Tempo da animação de digitação
+                setShowInputOrOptions(true)
+            }, 1500)
             return () => clearTimeout(timer)
         } else {
             setIsTyping(false)
-            setShowInputOrOptions(false) // Oculta inputs/opções enquanto há animação
+            setShowInputOrOptions(false)
         }
     }, [groupedMessages])
 
-    // Scroll automático
     useEffect(() => {
         window.scrollTo(0, document.body.scrollHeight)
     }, [messageHistory])
@@ -76,11 +112,22 @@ export default function TicketPage() {
         setMessageHistory((prev) => [
             ...prev,
             { content: service, isUser: true },
-            { content: 'Vamos lá, qual seu nome?', isUser: false }
+            { content: serviceExplanations[service as keyof typeof serviceExplanations], isUser: false },
+            { content: continuePrompt, isUser: false } // Add as a separate message
         ])
         setSelectedService(service)
+        setStep('serviceConfirm')
+        setShowInputOrOptions(false)
+    }
+
+    const handleServiceConfirm = () => {
+        setMessageHistory((prev) => [
+            ...prev,
+            { content: 'Sim, desejo continuar.', isUser: true },
+            { content: 'Vamos lá, qual seu nome?', isUser: false }
+        ])
         setStep('name')
-        setShowInputOrOptions(false) // Oculta inputs/opções até a animação terminar
+        setShowInputOrOptions(false)
     }
 
     const handleNameSubmit = (name: string) => {
@@ -89,13 +136,13 @@ export default function TicketPage() {
             ...prev,
             { content: name, isUser: true },
             {
-                content: `Perfeito, ${name}!\n\nPara poder identificá-lo e notificar o andamento de serviços, precisaremos do seu email.`,
+                content: `Perfeito, ${name}!`,
                 isUser: false
             },
             { content: 'Qual o seu melhor e-mail?', isUser: false }
         ])
         setStep('email')
-        setShowInputOrOptions(false) // Oculta inputs/opções até a animação terminar
+        setShowInputOrOptions(false)
     }
 
     const handleEmailSubmit = (email: string) => {
@@ -103,6 +150,21 @@ export default function TicketPage() {
         setMessageHistory((prev) => [
             ...prev,
             { content: email, isUser: true },
+            {
+                content: `Quase lá, ${name}!`,
+                isUser: false
+            },
+            { content: 'Por favor, informe abaixo seu número de whatsapp (+DDD)', isUser: false }
+        ])
+        setStep('whatsapp')
+        setShowInputOrOptions(false)
+    }
+
+    const handleWhatsappSubmit = (whatsapp: string) => {
+        setWhatsapp(whatsapp)
+        setMessageHistory((prev) => [
+            ...prev,
+            { content: whatsapp, isUser: true },
             {
                 content: 'Obrigado! Seu chamado foi aberto. Você receberá uma confirmação por e-mail.',
                 isUser: false
@@ -113,14 +175,15 @@ export default function TicketPage() {
             }
         ])
         setStep('done')
-        setShowInputOrOptions(false) // Oculta inputs/opções até a animação terminar
+        setShowInputOrOptions(false)
     }
 
     useEffect(() => {
         console.log(selectedService)
         console.log(name)
         console.log(email)
-    }, [selectedService, name, email])
+        console.log(whatsapp)
+    }, [selectedService, name, email, whatsapp])
 
     return (
         <div className="max-w-3xl mx-auto px-6 pb-12 pt-40">
@@ -176,10 +239,16 @@ export default function TicketPage() {
                 })}
             </div>
 
-            {/* Exibe inputs/opções apenas após a animação terminar */}
             {showInputOrOptions && (
                 <>
                     {step === 'options' && <Options options={services} onSelect={handleServiceSelect} />}
+
+                    {step === 'serviceConfirm' && (
+                        <Options
+                            options={['Sim, desejo continuar.']}
+                            onSelect={() => handleServiceConfirm()}
+                        />
+                    )}
 
                     {step === 'name' && (
                         <InputWithButton
@@ -195,6 +264,15 @@ export default function TicketPage() {
                             buttonText="Enviar"
                             onSubmit={handleEmailSubmit}
                             type="email"
+                        />
+                    )}
+
+                    {step === 'whatsapp' && (
+                        <InputWithButton
+                            placeholder="Digite seu WhatsApp com DDD"
+                            buttonText="Enviar"
+                            onSubmit={handleWhatsappSubmit}
+                            type="tel"
                         />
                     )}
                 </>

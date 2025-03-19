@@ -29,7 +29,7 @@ export default function CookieBanner() {
     }
 
     return (
-        <div className="fixed bottom-5 left-5 right-5 max-w-[400px] bg-light p-8 py-6 rounded-2xl shadow-[0px_8px_46px_rgba(0,0,0,0.2)] z-50">
+        <div className="fixed bottom-5 left-5 right-5 max-w-[400px] bg-light p-8 py-6 rounded-2xl shadow-[0px_8px_46px_rgba(0,0,0,0.2)] shadow-2 z-50">
             <div className="flex-1">
                 <h3 className="text-2xl font-bold">Cookies</h3>
                 <p className="text-base mt-2">
