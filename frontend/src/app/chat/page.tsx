@@ -153,7 +153,7 @@ export default function TicketPage() {
             ...prev,
             { content: name, isUser: true },
             {
-                content: `Perfeito, ${name}!`,
+                content: `Perfeito, ${name.split(' ')[0]}!`,
                 isUser: false
             },
             { content: 'Qual o seu melhor e-mail?', isUser: false }
@@ -175,7 +175,7 @@ export default function TicketPage() {
             ...prev,
             { content: email, isUser: true },
             {
-                content: `Quase lá, ${name}!`,
+                content: `Quase lá, ${name.split(' ')[0]}!`,
                 isUser: false
             },
             { content: 'Por favor, informe abaixo seu número de whatsapp', isUser: false }
@@ -197,7 +197,7 @@ export default function TicketPage() {
             ...prev,
             { content: whatsapp, isUser: true },
             {
-                content: `Tudo certo, ${name}! 👍`,
+                content: `Tudo certo, ${name.split(' ')[0]}! 👍`,
                 isUser: false
             },
             {
