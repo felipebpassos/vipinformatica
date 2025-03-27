@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/auth_check.php';
 
 // Verificar permissão
-if (!in_array($_SESSION['user_role'], ['admin', 'owner'])) {
+if (!in_array($_SESSION['user_role'], ['admin', 'technician'])) {
     header("Location: dashboard.php");
     exit();
 }

@@ -28,7 +28,7 @@ export default function HeroSection() {
                                 icon={faHeadset}
                                 className="text-sm md:text-base text-gray-400"
                             />
-                            <span className="text-xs md:text-sm text-gray-400">Suporte e vendas</span>
+                            <span className="text-xs md:text-sm text-gray-400">Fale com um especialista</span>
                         </div>
                     </div>
 

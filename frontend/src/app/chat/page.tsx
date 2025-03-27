@@ -67,6 +67,23 @@ export default function TicketPage() {
     const [isTyping, setIsTyping] = useState(false)
     const [showInputOrOptions, setShowInputOrOptions] = useState(false)
 
+    // New state for validation errors
+    const [emailError, setEmailError] = useState('')
+    const [whatsappError, setWhatsappError] = useState('')
+
+    // Email validation function
+    const validateEmail = (email: string): boolean => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        return emailRegex.test(email)
+    }
+
+    // Brazilian phone number validation function
+    const validateWhatsapp = (phone: string): boolean => {
+        // Regex para validar números brasileiros sem exigir o +55
+        const phoneRegex = /^(\(?\d{2}\)?)\s?(\d{4,5}[-]?\d{4})$/
+        return phoneRegex.test(phone.replace(/\s+/g, ''))
+    }
+
     const groupedMessages = useMemo(() => {
         const groups: typeof messageHistory[] = []
         for (const msg of messageHistory) {
@@ -146,6 +163,13 @@ export default function TicketPage() {
     }
 
     const handleEmailSubmit = (email: string) => {
+        if (!validateEmail(email)) {
+            setEmailError('Por favor, insira um e-mail válido.')
+            return
+        }
+
+        // Clear any previous email error
+        setEmailError('')
         setEmail(email)
         setMessageHistory((prev) => [
             ...prev,
@@ -154,36 +178,68 @@ export default function TicketPage() {
                 content: `Quase lá, ${name}!`,
                 isUser: false
             },
-            { content: 'Por favor, informe abaixo seu número de whatsapp (+DDD)', isUser: false }
+            { content: 'Por favor, informe abaixo seu número de whatsapp', isUser: false }
         ])
         setStep('whatsapp')
         setShowInputOrOptions(false)
     }
 
     const handleWhatsappSubmit = (whatsapp: string) => {
+        if (!validateWhatsapp(whatsapp)) {
+            setWhatsappError('Por favor, insira um número de WhatsApp válido com DDD (ex: 79 9 9999-9999).')
+            return
+        }
+
+        // Clear any previous whatsapp error
+        setWhatsappError('')
         setWhatsapp(whatsapp)
         setMessageHistory((prev) => [
             ...prev,
             { content: whatsapp, isUser: true },
             {
-                content: 'Obrigado! Seu chamado foi aberto. Você receberá uma confirmação por e-mail.',
+                content: `Tudo certo, ${name}! 👍`,
                 isUser: false
             },
             {
-                content: 'Seu chamado foi registrado com sucesso!',
+                content: 'Seu chamado foi aberto com sucesso.',
+                isUser: false
+            },
+            {
+                content: 'Você receberá uma confirmação por e-mail e nossa equipe entrará em contato em breve para dar andamento ao seu atendimento.',
                 isUser: false
             }
         ])
         setStep('done')
         setShowInputOrOptions(false)
-    }
 
-    useEffect(() => {
-        console.log(selectedService)
-        console.log(name)
-        console.log(email)
-        console.log(whatsapp)
-    }, [selectedService, name, email, whatsapp])
+        // Envio para API
+        const formData = {
+            name: name,
+            email: email,
+            phone: whatsapp,
+            service: selectedService
+        }
+
+        fetch('https://vipinformatica.felipepassos.dev/api', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData),
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro na requisição')
+                }
+                return response.json()
+            })
+            .then(data => {
+                console.log('Sucesso:', data)
+            })
+            .catch((error) => {
+                console.error('Erro:', error)
+            })
+    }
 
     return (
         <div className="max-w-3xl mx-auto px-6 pb-12 pt-40">
@@ -259,21 +315,39 @@ export default function TicketPage() {
                     )}
 
                     {step === 'email' && (
-                        <InputWithButton
-                            placeholder="Digite seu e-mail"
-                            buttonText="Enviar"
-                            onSubmit={handleEmailSubmit}
-                            type="email"
-                        />
+                        <div>
+                            <InputWithButton
+                                placeholder="Digite seu e-mail"
+                                buttonText="Enviar"
+                                onSubmit={handleEmailSubmit}
+                                type="email"
+                            />
+                            {emailError && (
+                                <div className="flex justify-end w-full">
+                                    <span className="text-red-500 mt-2 text-sm w-[400px]">
+                                        {emailError}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
                     )}
 
                     {step === 'whatsapp' && (
-                        <InputWithButton
-                            placeholder="Digite seu WhatsApp com DDD"
-                            buttonText="Enviar"
-                            onSubmit={handleWhatsappSubmit}
-                            type="tel"
-                        />
+                        <div>
+                            <InputWithButton
+                                placeholder="Digite seu WhatsApp com DDD"
+                                buttonText="Enviar"
+                                onSubmit={handleWhatsappSubmit}
+                                type="tel"
+                            />
+                            {whatsappError && (
+                                <div className="flex justify-end w-full">
+                                    <span className="text-red-500 mt-2 text-sm w-[400px]">
+                                        {whatsappError}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </>
             )}

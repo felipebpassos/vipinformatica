@@ -7,7 +7,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $current_role = $_SESSION['user_role'];
-$allowed_roles = ['client', 'admin', 'owner'];
+$allowed_roles = ['client', 'admin', 'technician'];
 if (!in_array($current_role, $allowed_roles)) {
     header("Location: login.php");
     exit();

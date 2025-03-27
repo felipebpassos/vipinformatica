@@ -8,21 +8,21 @@ function seedUsers($conn) {
         [
             'name' => 'Alysson Melo',
             'email' => 'alysson@gmail.com',
-            'phone' => '(11) 98765-4321',
+            'phone' => '11987654321',
             'password' => 'senhaSegura123',
-            'role' => 'owner'
+            'role' => 'admin'
         ],
         [
             'name' => 'Felipe Passos',
             'email' => 'felipebpassos@gmail.com',
-            'phone' => '(21) 97654-3210',
+            'phone' => '21976543210',
             'password' => 'Fec3.,?!',
-            'role' => 'admin'
+            'role' => 'technician'
         ],
         [
             'name' => 'Pedro Santos',
             'email' => 'pedro.santos@gmail.com',
-            'phone' => '(31) 96543-2109',
+            'phone' => '31965432109',
             'password' => 'clientPass789',
             'role' => 'client'
         ]
@@ -65,4 +65,3 @@ if (php_sapi_name() === 'cli') {
 }
 
 $conn->close();
-?>
