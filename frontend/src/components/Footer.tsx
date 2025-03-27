@@ -58,8 +58,8 @@ export default function Footer() {
                 {/* Center Right */}
                 <div className="text-gray-600">
                     <ul className="space-y-2">
-                        <li><Link href="#" className="hover:text-gray-800">Minha conta</Link></li>
-                        <li><Link href="#" className="hover:text-gray-800">Atendimento</Link></li>
+                        <li><Link href="https://vipinformatica.felipepassos.dev/dashboard/login.php" className="hover:text-gray-800">Minha conta</Link></li>
+                        <li><Link href="/chat" className="hover:text-gray-800">Atendimento</Link></li>
                     </ul>
                 </div>
 
