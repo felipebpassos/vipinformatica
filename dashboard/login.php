@@ -1,5 +1,4 @@
 <?php
-session_start();
 require_once __DIR__ . '/includes/db_connect.php';
 
 $error = '';
@@ -37,12 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-cover bg-center" style="background-image: url('./assets/img/tech_bg.webp')">
+<body class="bg-cover bg-center max-h-screen" style="background-image: url('./assets/img/tech_bg.webp')">
     <div class="absolute inset-0 bg-black opacity-70 z-0"></div>
 
     <div class="relative z-10 min-h-screen flex items-center justify-center">
         <div class="space-y-4">
-            <a href="/" class="inline-block mb-8 flex justify-center">
+            <a href="https://vipinformatica.felipepassos.dev" class="inline-block mb-8 flex justify-center">
                 <img src="./assets/img/logo-2.png" alt="Logo" class="h-16 w-auto hover:opacity-80 transition-opacity" />
             </a>
 
@@ -77,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </form>
             </div>
 
-            <a href="/chat" class="text-white font-medium hover:text-gray-200 transition-colors flex m-auto w-fit">
+            <a href="https://vipinformatica.felipepassos.dev/chat" class="text-white font-medium hover:text-gray-200 transition-colors flex m-auto w-fit">
                 O que procura?
             </a>
         </div>

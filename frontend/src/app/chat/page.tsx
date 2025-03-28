@@ -211,7 +211,9 @@ export default function TicketPage() {
         ])
         setStep('done')
         setShowInputOrOptions(false)
+    }
 
+    const handleSubmitDone = () => {
         // Envio para API
         const formData = {
             name: name,
@@ -220,7 +222,7 @@ export default function TicketPage() {
             service: selectedService
         }
 
-        fetch('https://vipinformatica.felipepassos.dev/api', {
+        fetch('https://api.felipepassos.dev', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -240,6 +242,12 @@ export default function TicketPage() {
                 console.error('Erro:', error)
             })
     }
+
+    useEffect(() => {
+        if (step==='done') {
+            handleSubmitDone()
+        }
+    }, [step])
 
     return (
         <div className="max-w-3xl mx-auto px-6 pb-12 pt-40">
