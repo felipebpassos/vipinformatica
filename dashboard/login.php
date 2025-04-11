@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_name'] = $user['name'];
             $_SESSION['user_role'] = $user['role'];
-            header("Location: dashboard.php");
+            header("Location: " . $_ENV['APP_URL']);
             exit();
         }
     }
@@ -76,7 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </form>
             </div>
 
-            <a href="https://vipinformatica.felipepassos.dev/chat" class="text-white font-medium hover:text-gray-200 transition-colors flex m-auto w-fit">
+            <a href="https://vipinformatica.felipepassos.dev/chat"
+                class="text-white font-medium hover:text-gray-200 transition-colors flex m-auto w-fit">
                 O que procura?
             </a>
         </div>

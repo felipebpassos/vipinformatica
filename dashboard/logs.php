@@ -1,8 +1,11 @@
 <?php
 require_once __DIR__ . '/includes/auth_check.php';
+require_once 'includes/db_connect.php';
+
+$_SESSION['current_page'] = 'logs';
 
 if ($_SESSION['user_role'] !== 'admin') {
-    header("Location: dashboard.php");
+    header("Location: ". $_ENV['APP_URL']);
     exit();
 }
 

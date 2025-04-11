@@ -1,6 +1,7 @@
 <?php
 // Inicia a sessão
 session_start();
+require_once __DIR__ . '/config.php';
 
 // Limpa todas as variáveis de sessão
 $_SESSION = array();
@@ -24,5 +25,5 @@ if (ini_get("session.use_cookies")) {
 session_destroy();
 
 // Redireciona para a página de login
-header("Location: login.php");
+header("Location: ". $_ENV['APP_URL'] ."/login.php");
 exit();
