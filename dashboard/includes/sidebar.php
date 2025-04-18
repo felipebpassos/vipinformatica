@@ -17,37 +17,37 @@
         ?>
 
         <?php if ($_SESSION['user_role'] === 'client'): ?>
-            <a href="<?= $_ENV['APP_URL'] . '/tickets.php' ?>"
+            <a href="<?= $_ENV['APP_URL'] ?>"
                 class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('tickets') ?>">
                 <i class="fa-solid fa-file-lines mr-2"></i> Meus Chamados
             </a>
 
         <?php elseif ($_SESSION['user_role'] === 'technician'): ?>
-            <a href="<?= $_ENV['APP_URL'] . '/tickets.php' ?>"
+            <a href="<?= $_ENV['APP_URL'] ?>"
                 class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('tickets') ?>">
                 <i class="fa-solid fa-file-lines mr-2"></i> Chamados
+            </a>
+            <a href="<?= $_ENV['APP_URL'] . '/clients.php' ?>"
+                class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('clients') ?>">
+                <i class="fa-solid fa-user-group mr-2"></i> Clientes
             </a>
             <a href="<?= $_ENV['APP_URL'] . '/equipments.php' ?>"
                 class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('equipments') ?>">
                 <i class="fa-solid fa-laptop mr-2"></i> Equipamentos
             </a>
-            <a href="<?= $_ENV['APP_URL'] . '/clients.php' ?>"
-                class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('clients') ?>">
-                <i class="fa-solid fa-user-group mr-2"></i> Clientes
-            </a>
 
         <?php elseif ($_SESSION['user_role'] === 'admin'): ?>
-            <a href="<?= $_ENV['APP_URL'] . '/tickets.php' ?>"
+            <a href="<?= $_ENV['APP_URL'] ?>"
                 class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('tickets') ?>">
                 <i class="fa-regular fa-clipboard mr-2"></i> Chamados
             </a>
-            <a href="<?= $_ENV['APP_URL'] . '/equipments.php' ?>"
-                class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('equipments') ?>">
-                <i class="fa-solid fa-toolbox mr-2"></i> Equipamentos
-            </a>
             <a href="<?= $_ENV['APP_URL'] . '/clients.php' ?>"
                 class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('clients') ?>">
                 <i class="fa-solid fa-user-group mr-2"></i> Clientes
+            </a>
+            <a href="<?= $_ENV['APP_URL'] . '/equipments.php' ?>"
+                class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('equipments') ?>">
+                <i class="fa-solid fa-laptop mr-2"></i> Equipamentos
             </a>
             <a href="<?= $_ENV['APP_URL'] . '/logs.php' ?>"
                 class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('logs') ?>">
