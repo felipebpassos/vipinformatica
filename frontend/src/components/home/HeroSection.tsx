@@ -15,7 +15,7 @@ export default function HeroSection() {
                     Soluções em Tecnologia para Você e para sua Empresa
                 </h1>
                 <p className="max-w-4xl text-base md:text-lg lg:text-xl xl:text-2xl mb-12 mx-auto text-gray-300 leading-relaxed">
-                    Mais de 20 anos no mercado, prestando assessoria na área de TI: manutenção e suporte técnico, criação de sites e sistemas, instalação de redes e servidores, entre outros.
+                    Mais de 20 anos em TI: desde suporte técnico, a desenvolvimento web e infraestrutura de redes.
                 </p>
 
                 {/* Container principal alinhado ao centro */}

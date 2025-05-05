@@ -19,13 +19,13 @@
         <?php if ($_SESSION['user_role'] === 'client'): ?>
             <a href="<?= $_ENV['APP_URL'] ?>"
                 class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('tickets') ?>">
-                <i class="fa-solid fa-file-lines mr-2"></i> Meus Chamados
+                <i class="fa-regular fa-clipboard mr-2"></i> Meus Chamados
             </a>
 
         <?php elseif ($_SESSION['user_role'] === 'technician'): ?>
             <a href="<?= $_ENV['APP_URL'] ?>"
                 class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('tickets') ?>">
-                <i class="fa-solid fa-file-lines mr-2"></i> Chamados
+                <i class="fa-regular fa-clipboard mr-2"></i> Chamados
             </a>
             <a href="<?= $_ENV['APP_URL'] . '/clients.php' ?>"
                 class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('clients') ?>">
@@ -44,6 +44,10 @@
             <a href="<?= $_ENV['APP_URL'] . '/clients.php' ?>"
                 class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('clients') ?>">
                 <i class="fa-solid fa-user-group mr-2"></i> Clientes
+            </a>
+            <a href="<?= $_ENV['APP_URL'] . '/technicians.php' ?>"
+                class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('technicians') ?>">
+                <i class="fa-solid fa-helmet-safety mr-2"></i> Técnicos
             </a>
             <a href="<?= $_ENV['APP_URL'] . '/equipments.php' ?>"
                 class="mb-1 py-2 px-3 rounded hover:bg-gray-700 <?= activeClass('equipments') ?>">

@@ -68,16 +68,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password = generateRandomPassword();
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-        // Cria/atualiza usuário
-        // User::createOrUpdate($name, $email, $phone, $passwordHash);
+        $userId = User::createOrUpdate($name, $email, $phone, $passwordHash);
 
-        // Cria o ticket
-        // Ticket::create($userId, $service, $priority);
+        // informa ao MySQL quem está fazendo a ação para os triggers
+        $pdo = Database::getInstance();
+        $pdo->exec("SET @current_user_id = " . intval($userId));
+
+        // agora cria o chamado usando o mesmo usuário como ator
+        Ticket::create($userId, $service, $priority);
 
         // Envia e-mail de confirmação
-        // Mailer::sendWelcomeEmail($email, $name, $password, $service);
-
-        Mailer::sendWelcomeEmailTest($email, $name, $service);
+        Mailer::sendWelcomeEmail($email, $name, $password, $service);
 
         jsonResponse('success', 'Operação realizada com sucesso. Verifique seu email.');
 

@@ -2,8 +2,17 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/db_connect.php';
 
-function seedUsers($conn) {
-    // Users to seed
+// Limpa tabelas (e desabilita temporariamente as checks)
+$conn->query("SET FOREIGN_KEY_CHECKS = 0");
+$conn->query("TRUNCATE TABLE event_logs");
+$conn->query("TRUNCATE TABLE users");
+$conn->query("SET FOREIGN_KEY_CHECKS = 1");
+
+// Aqui definimos o ator das operações como '1' (será o ID do primeiro usuário criado)
+$conn->query("SET @current_user_id = 1");
+
+function seedUsers($conn)
+{
     $users = [
         [
             'name' => 'Alysson Melo',
@@ -16,7 +25,7 @@ function seedUsers($conn) {
             'name' => 'Felipe Passos',
             'email' => 'felipebpassos@gmail.com',
             'phone' => '21976543210',
-            'password' => 'Fec3.,?!',
+            'password' => 'senhaSegura123',
             'role' => 'technician'
         ],
         [
@@ -28,39 +37,32 @@ function seedUsers($conn) {
         ]
     ];
 
-    // Prepare the insert statement
-    $stmt = $conn->prepare("INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)");
+    $stmt = $conn->prepare("
+        INSERT INTO users (name, email, phone, password, role)
+        VALUES (?, ?, ?, ?, ?)
+    ");
 
     foreach ($users as $user) {
-        // Hash the password
-        $hashed_password = password_hash($user['password'], PASSWORD_DEFAULT);
-
-        // Bind parameters and execute
+        $hashed = password_hash($user['password'], PASSWORD_DEFAULT);
         $stmt->bind_param(
-            "sssss", 
-            $user['name'], 
-            $user['email'], 
-            $user['phone'], 
-            $hashed_password, 
+            "sssss",
+            $user['name'],
+            $user['email'],
+            $user['phone'],
+            $hashed,
             $user['role']
         );
-
-        if ($stmt->execute()) {
-            echo "User {$user['name']} added successfully.\n";
+        if (!$stmt->execute()) {
+            echo "Erro ao adicionar {$user['name']}: " . $stmt->error . "\n";
         } else {
-            echo "Error adding user {$user['name']}: " . $stmt->error . "\n";
+            echo "Usuário {$user['name']} adicionado com sucesso.\n";
         }
     }
 
     $stmt->close();
 }
 
-// Check if the script is being run directly
 if (php_sapi_name() === 'cli') {
-    // Clear existing users before seeding (optional)
-    $conn->query("DELETE FROM users");
-
-    // Seed users
     seedUsers($conn);
 }
 

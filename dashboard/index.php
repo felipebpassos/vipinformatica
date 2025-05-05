@@ -1,14 +1,14 @@
 <?php
-require_once 'includes/auth_check.php';
-require_once 'includes/db_connect.php';
+require_once __DIR__ . '/includes/auth_check.php';
+require_once __DIR__ . '/includes/db_connect.php';
 
 // Recupera informações do usuário autenticado
-$userId = $_SESSION['user_id'];
+$userId   = $_SESSION['user_id'];
 $userRole = $_SESSION['user_role']; // 'admin', 'technician' ou 'client'
 $_SESSION['current_page'] = 'tickets';
 
 // --- PAGINAÇÃO CONFIGURAÇÃO ---
-$perPage = 10;
+$perPage     = 10;
 $currentPage = isset($_GET['page']) && is_numeric($_GET['page'])
     ? (int) $_GET['page']
     : 1;
@@ -27,79 +27,128 @@ if ($userRole === 'client') {
 $countStmt->execute();
 $totalRecords = $countStmt->get_result()->fetch_assoc()['total'];
 $countStmt->close();
-
-// Calcula total de páginas
 $totalPages = (int) ceil($totalRecords / $perPage);
 
 // Inicializa variável de erros
 $errors = [];
 
-// Se for POST, trata a criação de novo chamado
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($userRole === 'client') {
-        $clientId = $userId;
-        $priority = 'normal';
-    } else {
-        $clientId = isset($_POST['client_id']) ? intval($_POST['client_id']) : 0;
-        if (empty($clientId)) {
-            $errors[] = 'Selecione um cliente.';
-        }
-        $priority = $_POST['priority'] ?? 'normal';
-    }
+// Trata formulários de criação, edição e exclusão
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    // marca quem está executando
+    $conn->query("SET @current_user_id = " . intval($userId));
 
-    $serviceId = isset($_POST['service_id']) ? intval($_POST['service_id']) : 0;
-    $description = trim($_POST['description'] ?? '');
-    $selectedEquipment = $_POST['equipment_ids'] ?? [];
-
-    if (empty($serviceId)) {
-        $errors[] = 'Selecione um serviço.';
-    }
-    if (empty($description)) {
-        $errors[] = 'Informe uma descrição para o chamado.';
-    }
-
-    if (empty($errors)) {
-        $stmt = $conn->prepare("
-            INSERT INTO tickets (service_id, client_id, description, priority)
-            VALUES (?, ?, ?, ?)
-        ");
-        $stmt->bind_param("iiss", $serviceId, $clientId, $description, $priority);
-        if ($stmt->execute()) {
-            $ticketId = $stmt->insert_id;
-            $stmt->close();
-
-            if (!empty($selectedEquipment)) {
-                $stmt2 = $conn->prepare("
-                    INSERT INTO ticket_equipment (ticket_id, equipment_id)
-                    VALUES (?, ?)
-                ");
-                foreach ($selectedEquipment as $equipmentId) {
-                    $stmt2->bind_param("ii", $ticketId, $equipmentId);
-                    $stmt2->execute();
-                }
-                $stmt2->close();
+    $action = $_POST['action'];
+    if ($action === 'create_ticket') {
+        // criação
+        if ($userRole === 'client') {
+            $clientId = $userId;
+            $priority = 'normal';
+        } else {
+            $clientId = isset($_POST['client_id']) ? intval($_POST['client_id']) : 0;
+            if (empty($clientId)) {
+                $errors[] = 'Selecione um cliente.';
             }
-            header("Location: tickets.php?success=Chamado+criado+com+sucesso");
+            $priority = $_POST['priority'] ?? 'normal';
+        }
+        $serviceId         = isset($_POST['service_id']) ? intval($_POST['service_id']) : 0;
+        $description       = trim($_POST['description'] ?? '');
+        $selectedEquipment = $_POST['equipment_ids'] ?? [];
+        if (empty($serviceId)) {
+            $errors[] = 'Selecione um serviço.';
+        }
+        if (empty($errors)) {
+            $stmt = $conn->prepare("
+                INSERT INTO tickets (service_id, client_id, description, priority)
+                VALUES (?, ?, ?, ?)
+            ");
+            $stmt->bind_param("iiss", $serviceId, $clientId, $description, $priority);
+            if ($stmt->execute()) {
+                $ticketId = $stmt->insert_id;
+                $stmt->close();
+                if (!empty($selectedEquipment)) {
+                    $stmt2 = $conn->prepare("
+                        INSERT INTO ticket_equipment (ticket_id, equipment_id)
+                        VALUES (?, ?)
+                    ");
+                    foreach ($selectedEquipment as $equipmentId) {
+                        $stmt2->bind_param("ii", $ticketId, $equipmentId);
+                        $stmt2->execute();
+                    }
+                    $stmt2->close();
+                }
+                header("Location: index.php?page={$currentPage}&success=Chamado+criado+com+sucesso");
+                exit;
+            } else {
+                $errors[] = "Erro ao criar o chamado: " . $stmt->error;
+            }
+        }
+
+    } elseif ($action === 'edit_ticket') {
+        // edição
+        $ticketId         = intval($_POST['ticket_id']);
+        $serviceId        = intval($_POST['service_id']);
+        $description      = trim($_POST['description']);
+        $priority         = $_POST['priority'] ?? 'normal';
+        $status           = $_POST['status'] ?? 'open';
+        $selectedEquipment = $_POST['equipment_ids'] ?? [];
+
+        if ($serviceId <= 0) {
+            $errors[] = 'Serviço inválido.';
+        }
+
+        if (empty($errors)) {
+            $stmt = $conn->prepare("
+                UPDATE tickets
+                SET service_id = ?, description = ?, priority = ?, status = ?
+                WHERE id = ?
+            ");
+            $stmt->bind_param("isssi", $serviceId, $description, $priority, $status, $ticketId);
+            if ($stmt->execute()) {
+                $stmt->close();
+                // atualiza equipamentos
+                $conn->query("DELETE FROM ticket_equipment WHERE ticket_id = $ticketId");
+                if (!empty($selectedEquipment)) {
+                    $stmt2 = $conn->prepare("
+                        INSERT INTO ticket_equipment (ticket_id, equipment_id)
+                        VALUES (?, ?)
+                    ");
+                    foreach ($selectedEquipment as $eqId) {
+                        $stmt2->bind_param("ii", $ticketId, $eqId);
+                        $stmt2->execute();
+                    }
+                    $stmt2->close();
+                }
+                header("Location: index.php?page={$currentPage}&success=Chamado+atualizado+com+sucesso");
+                exit;
+            } else {
+                $errors[] = "Erro ao atualizar: " . $stmt->error;
+            }
+        }
+
+    } elseif ($action === 'delete_ticket') {
+        // exclusão
+        $ticketId = intval($_POST['ticket_id']);
+        $conn->query("DELETE FROM ticket_equipment WHERE ticket_id = $ticketId");
+        if ($conn->query("DELETE FROM tickets WHERE id = $ticketId")) {
+            header("Location: index.php?page={$currentPage}&success=Chamado+excluído+com+sucesso");
             exit;
         } else {
-            $errors[] = "Erro ao criar o chamado: " . $stmt->error;
+            $errors[] = "Erro ao excluir: " . $conn->error;
         }
     }
 }
 
-// Carrega lista de serviços
-$services = [];
-$res = $conn->query("SELECT * FROM services ORDER BY service ASC");
+// Carrega listas auxiliares
+$services    = [];
+$res         = $conn->query("SELECT * FROM services ORDER BY service ASC");
 while ($row = $res->fetch_assoc()) {
     $services[] = $row;
 }
-
-// Carrega equipamentos ou clientes conforme perfil
 if ($userRole === 'client') {
-    $equipments = [];
+    $equipmentsAll = [];
     $res = $conn->query("SELECT * FROM equipment WHERE user_id = $userId ORDER BY type ASC");
     while ($row = $res->fetch_assoc()) {
-        $equipments[] = $row;
+        $equipmentsAll[] = $row;
     }
 } else {
     $clients = [];
@@ -107,7 +156,7 @@ if ($userRole === 'client') {
     while ($row = $res->fetch_assoc()) {
         $clients[] = $row;
     }
-    $equipments = [];
+    $equipmentsAll = [];
     $res = $conn->query("
         SELECT e.*, u.name AS client_name
         FROM equipment e
@@ -115,7 +164,7 @@ if ($userRole === 'client') {
         ORDER BY u.name, e.type ASC
     ");
     while ($row = $res->fetch_assoc()) {
-        $equipments[] = $row;
+        $equipmentsAll[] = $row;
     }
 }
 
@@ -142,9 +191,19 @@ if ($userRole === 'client') {
     $stmt->bind_param("ii", $perPage, $offset);
 }
 $stmt->execute();
-$result = $stmt->get_result();
-$tickets = $result->fetch_all(MYSQLI_ASSOC);
+$tickets = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
+
+$priorityMap = [
+    'normal'        => 'Normal',
+    'high' => 'Alta',
+];
+
+$statusMap = [
+    'open'        => 'Aberto',
+    'in_progress' => 'Em progresso',
+    'closed'      => 'Finalizado',
+];
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -175,7 +234,7 @@ $stmt->close();
                     <?php else: ?>
                         <h1 class="text-base font-bold">Ordens de serviço</h1>
                     <?php endif; ?>
-                    <button id="openModalButton"
+                    <button id="btn-open-create"
                         class="bg-red-500 text-white text-sm px-4 py-2 rounded hover:bg-red-600 flex items-center gap-2">
                         <i class="fas fa-plus"></i> Novo chamado
                     </button>
@@ -196,6 +255,14 @@ $stmt->close();
                     </div>
                 <?php endif; ?>
 
+                <?php if ($userRole === 'client'): ?>
+    <div class="mb-4">
+        <span class="bg-gray-600 text-white rounded-lg px-4 py-2 mx-auto block">
+            Abra um chamado de ordem de serviço que nossos especialistas entrarão em contato em breve pra resolver seu problema.
+        </span>
+    </div>
+<?php endif; ?>
+
                 <table class="min-w-full bg-white shadow-md rounded mb-0">
                     <thead>
                         <tr>
@@ -204,7 +271,6 @@ $stmt->close();
                                 <th class="py-2 px-4 border-b">Cliente</th>
                             <?php endif; ?>
                             <th class="py-2 px-4 border-b">Serviço</th>
-                            <th class="py-2 px-4 border-b">Descrição</th>
                             <?php if ($userRole !== 'client'): ?>
                                 <th class="py-2 px-4 border-b">Prioridade</th>
                             <?php endif; ?>
@@ -214,37 +280,212 @@ $stmt->close();
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($tickets as $ticket): ?>
-                            <tr class="text-center border-t">
-                                <td class="py-2 px-4"><?= $ticket['id'] ?></td>
-                                <?php if ($userRole !== 'client'): ?>
-                                    <td class="py-2 px-4"><?= htmlspecialchars($ticket['client_name']) ?></td>
-                                <?php endif; ?>
-                                <td class="py-2 px-4"><?= htmlspecialchars($ticket['service']) ?></td>
-                                <td class="py-2 px-4">
-                                    <?= htmlspecialchars(substr($ticket['description'], 0, 50)) ?>
-                                    <?= strlen($ticket['description']) > 50 ? '...' : '' ?>
-                                </td>
-                                <?php if ($userRole !== 'client'): ?>
-                                    <td class="py-2 px-4"><?= ucfirst(htmlspecialchars($ticket['priority'])) ?></td>
-                                <?php endif; ?>
-                                <td class="py-2 px-4"><?= ucfirst(htmlspecialchars($ticket['status'])) ?></td>
-                                <td class="py-2 px-4">
-                                    <?= date("d/m/Y H:i", strtotime($ticket['created_at'])) ?>
-                                </td>
-                                <td class="py-2 px-4">
-                                    <a href="ticket_detail.php?id=<?= $ticket['id'] ?>"
-                                        class="text-blue-500 hover:underline">Ver detalhes</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
                         <?php if (empty($tickets)): ?>
                             <tr>
                                 <td colspan="<?= $userRole !== 'client' ? 8 : 7 ?>" class="py-4 text-center text-gray-500">
-                                    Nenhum registro encontrado.
-                                </td>
+                                    Nenhum
+                                    registro encontrado.</td>
                             </tr>
                         <?php endif; ?>
+                        <?php foreach ($tickets as $t): ?>
+                            <tr class="text-center border-t">
+                                <td class="py-2 px-4"><?= $t['id'] ?></td>
+                                <?php if ($userRole !== 'client'): ?>
+                                    <td class="py-2 px-4"><?= htmlspecialchars($t['client_name']) ?></td>
+                                <?php endif; ?>
+                                <td class="py-2 px-4"><?= htmlspecialchars($t['service']) ?></td>
+                                <?php if ($userRole !== 'client'): ?>
+                                    <td class="py-2 px-4"><?= $priorityMap[$t['priority']] ?></td>
+                                <?php endif; ?>
+                                <td class="py-2 px-4"><?= $statusMap[$t['status']] ?></td>
+                                <td class="py-2 px-4"><?= date("d/m/Y H:i", strtotime($t['created_at'])) ?></td>
+                                <td class="py-2 px-4 space-x-2">
+    <?php if ($userRole === 'client'): ?>
+        <button class="js-open-info" data-id="<?= $t['id'] ?>">
+            <i class="fas fa-info-circle text-gray-400"></i>
+        </button>
+    <?php elseif ($userRole === 'technician'): ?>
+        <button class="js-open-info" data-id="<?= $t['id'] ?>">
+            <i class="fas fa-info-circle text-gray-400"></i>
+        </button>
+        <button class="js-open-edit" data-id="<?= $t['id'] ?>">
+            <i class="fas fa-edit text-gray-400"></i>
+        </button>
+    <?php elseif ($userRole === 'admin'): ?>
+        <button class="js-open-info" data-id="<?= $t['id'] ?>">
+            <i class="fas fa-info-circle text-gray-400"></i>
+        </button>
+        <button class="js-open-edit" data-id="<?= $t['id'] ?>">
+            <i class="fas fa-edit text-gray-400"></i>
+        </button>
+        <button class="js-open-delete" data-id="<?= $t['id'] ?>">
+            <i class="fas fa-trash text-red-500"></i>
+        </button>
+    <?php endif; ?>
+</td>
+                            </tr>
+
+                            <!-- Info Modal -->
+                            <div id="modal-info-<?= $t['id'] ?>"
+                                class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
+                                <div class="bg-white p-6 rounded-lg w-full max-w-lg relative">
+                                    <button
+                                        class="js-close-info absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
+                                    <h2 class="text-xl font-bold mb-4">Detalhes do Chamado #<?= $t['id'] ?></h2>
+                                    <ul class="space-y-2 text-gray-700">
+                                        <?php if ($userRole !== 'client'): ?>
+                                            <li><strong>Cliente:</strong>
+                                                <?= htmlspecialchars($t['client_name']) ?>
+                                            </li>
+                                        <?php endif; ?>
+                                        <li><strong>Serviço:</strong> <?= htmlspecialchars($t['service']) ?></li>
+                                        <li><strong>Descrição:</strong> <?= nl2br(htmlspecialchars($t['description'])) ?>
+                                        </li>
+                                        <li><strong>Prioridade:</strong> <?= $priorityMap[$t['priority']] ?>
+                                        </li>
+                                        <li><strong>Status:</strong> <?= $statusMap[$t['status']] ?></li>
+                                        <li><strong>Criado em:</strong>
+                                            <?= date("d/m/Y H:i", strtotime($t['created_at'])) ?>
+                                        </li>
+                                        <?php if ($t['closed_at']): ?>
+                                            <li><strong>Fechado em:</strong>
+                                                <?= date("d/m/Y H:i", strtotime($t['closed_at'])) ?>
+                                            </li>
+                                        <?php endif; ?>
+                                        <li><strong>Equipamentos:</strong>
+                                            <?php
+                                            $eqs = $conn->query("SELECT e.* FROM ticket_equipment te JOIN equipment e ON te.equipment_id=e.id WHERE te.ticket_id={$t['id']}");
+                                            if ($eqs->num_rows) {
+                                                echo '<ul class="list-disc list-inside">';
+                                                while ($e = $eqs->fetch_assoc()) {
+                                                    $label = ($userRole === 'client')
+                                                        ? "{$e['type']} - {$e['equipment_code']}"
+                                                        : "{$e['client_name']} - {$e['type']} - {$e['equipment_code']}";
+                                                    echo "<li>" . htmlspecialchars($label) . "</li>";
+                                                }
+                                                echo '</ul>';
+                                            } else {
+                                                echo 'Nenhum.';
+                                            }
+                                            ?>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Edit Modal -->
+                            <div id="modal-edit-<?= $t['id'] ?>"
+                                class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
+                                <div class="bg-white p-6 rounded-lg w-full max-w-md relative overflow-auto max-h-screen">
+                                    <button
+                                        class="js-close-edit absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
+                                    <h2 class="text-xl font-bold mb-4">Editar Chamado #<?= $t['id'] ?></h2>
+                                    <form action="index.php?page=<?= $currentPage ?>" method="POST">
+                                        <input type="hidden" name="action" value="edit_ticket">
+                                        <input type="hidden" name="ticket_id" value="<?= $t['id'] ?>">
+
+                                        <div class="mb-4">
+                                            <label for="service_id_<?= $t['id'] ?>"
+                                                class="block text-gray-700">Serviço</label>
+                                            <select name="service_id" id="service_id_<?= $t['id'] ?>"
+                                                class="w-full p-2 border rounded">
+                                                <?php foreach ($services as $s): ?>
+                                                    <option value="<?= $s['id'] ?>" <?= $s['id'] == $t['service_id'] ? 'selected' : '' ?>>
+                                                        <?= htmlspecialchars($s['service']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+
+                                        <div class="mb-4">
+                                            <label for="description_<?= $t['id'] ?>"
+                                                class="block text-gray-700">Descrição</label>
+                                            <textarea name="description" id="description_<?= $t['id'] ?>" rows="4"
+                                                class="w-full p-2 border rounded"><?= htmlspecialchars($t['description']) ?></textarea>
+                                        </div>
+
+                                        <?php if ($userRole !== 'client'): ?>
+                                            <div class="mb-4">
+                                                <label for="priority_<?= $t['id'] ?>"
+                                                    class="block text-gray-700">Prioridade</label>
+                                                <select name="priority" id="priority_<?= $t['id'] ?>"
+                                                    class="w-full p-2 border rounded">
+                                                    <option value="normal" <?= $t['priority'] === 'normal' ? 'selected' : '' ?>>
+                                                        Normal
+                                                    </option>
+                                                    <option value="high" <?= $t['priority'] === 'high' ? 'selected' : '' ?>>Alta
+                                                    </option>
+                                                </select>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <div class="mb-4">
+                                        <label for="status_<?= $t['id'] ?>" class="block text-gray-700">Status</label>
+<select name="status" id="status_<?= $t['id'] ?>" class="w-full p-2 border rounded">
+    <?php foreach ($statusMap as $value => $label): ?>
+        <option value="<?= $value ?>" <?= $t['status'] === $value ? 'selected' : '' ?>>
+            <?= $label ?>
+        </option>
+    <?php endforeach; ?>
+</select>
+                                        </div>
+
+                                        <div class="mb-4">
+                                            <label for="equipment_ids_<?= $t['id'] ?>"
+                                                class="block text-gray-700">Equipamentos</label>
+                                            <select name="equipment_ids[]" id="equipment_ids_<?= $t['id'] ?>"
+                                                class="w-full p-2 border rounded" multiple>
+                                                <?php
+                                                // equipamentos já associados
+                                                $assoc = [];
+                                                $eqs2 = $conn->query("SELECT equipment_id FROM ticket_equipment WHERE ticket_id={$t['id']}");
+                                                while ($e2 = $eqs2->fetch_assoc()) {
+                                                    $assoc[] = $e2['equipment_id'];
+                                                }
+                                                ?>
+                                                <?php foreach ($equipmentsAll as $e): ?>
+                                                    <?php
+                                                    $label = ($userRole === 'client')
+                                                        ? "{$e['type']} - {$e['equipment_code']}"
+                                                        : "{$e['client_name']} - {$e['type']} - {$e['equipment_code']}";
+                                                    ?>
+                                                    <option value="<?= $e['id'] ?>" <?= in_array($e['id'], $assoc) ? 'selected' : '' ?>>
+                                                        <?= htmlspecialchars($label) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <p class="text-gray-600 text-sm">Ctrl/Cmd para múltipla seleção.</p>
+                                        </div>
+
+                                        <button type="submit"
+                                            class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                                            Salvar alterações
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Delete Modal -->
+                            <div id="modal-delete-<?= $t['id'] ?>"
+                                class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
+                                <div class="bg-white p-6 rounded-lg w-full max-w-sm relative">
+                                    <button
+                                        class="js-close-delete absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
+                                    <h2 class="text-xl font-bold mb-4">Excluir Chamado #<?= $t['id'] ?></h2>
+                                    <p class="mb-4">Você tem certeza que deseja excluir este chamado?</p>
+                                    <form action="index.php?page=<?= $currentPage ?>" method="POST"
+                                        class="flex justify-end space-x-2">
+                                        <input type="hidden" name="action" value="delete_ticket">
+                                        <input type="hidden" name="ticket_id" value="<?= $t['id'] ?>">
+                                        <button type="button"
+                                            class="px-4 py-2 rounded border hover:bg-gray-100 js-close-delete">Cancelar</button>
+                                        <button type="submit"
+                                            class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Excluir</button>
+                                    </form>
+                                </div>
+                            </div>
+
+                        <?php endforeach; ?>
                     </tbody>
                 </table>
 
@@ -277,102 +518,124 @@ $stmt->close();
                 </div>
             </div>
 
-            <!-- Modal para criação de novo Chamado -->
-            <div id="modal" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 hidden">
-                <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative">
-                    <button id="closeModalButton" class="absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
-                    <h2 class="text-xl font-bold mb-4">Novo Chamado</h2>
-                    <form action="tickets.php" method="POST">
-                        <?php if ($userRole !== 'client'): ?>
-                            <div class="mb-4">
-                                <label for="client_id" class="block text-gray-700">Cliente</label>
-                                <select name="client_id" id="client_id" class="w-full p-2 border rounded">
-                                    <option value="">Selecione um cliente</option>
-                                    <?php foreach ($clients as $client): ?>
-                                        <option value="<?= $client['id'] ?>">
-                                            <?= htmlspecialchars($client['name']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        <?php endif; ?>
+            <!-- Create Modal -->
+<div id="modal-create" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white p-6 rounded-lg w-full max-w-md relative overflow-auto max-h-screen">
+        <button id="close-create" class="absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
+        <h2 class="text-xl font-bold mb-4">Novo Chamado</h2>
+        <form action="index.php?page=<?= $currentPage?>" method="POST">
+            <input type="hidden" name="action" value="create_ticket">
+            <?php if($userRole!=='client'): ?>
+            <div class="mb-4">
+                <label for="client_id" class="block text-gray-700">Cliente</label>
+                <select name="client_id" id="client_id" class="w-full p-2 border rounded">
+                    <option value="">Selecione um cliente</option>
+                    <?php foreach($clients as $c): ?>
+                        <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php endif; ?>
 
-                        <div class="mb-4">
-                            <label for="service_id" class="block text-gray-700">Serviço</label>
-                            <select name="service_id" id="service_id" class="w-full p-2 border rounded">
-                                <option value="">Selecione um serviço</option>
-                                <?php foreach ($services as $service): ?>
-                                    <option value="<?= $service['id'] ?>">
-                                        <?= htmlspecialchars($service['service']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="description" class="block text-gray-700">Descrição</label>
-                            <textarea name="description" id="description" rows="4" class="w-full p-2 border rounded"
-                                placeholder="Descreva o problema"></textarea>
-                        </div>
-
-                        <?php if ($userRole !== 'client'): ?>
-                            <div class="mb-4">
-                                <label for="priority" class="block text-gray-700">Prioridade</label>
-                                <select name="priority" id="priority" class="w-full p-2 border rounded">
-                                    <option value="normal" selected>Normal</option>
-                                    <option value="high">Alta</option>
-                                </select>
-                            </div>
-                        <?php endif; ?>
-
-                        <?php if (!empty($equipments)): ?>
-                            <div class="mb-4">
-                                <label for="equipment_ids" class="block text-gray-700">Equipamentos</label>
-                                <select name="equipment_ids[]" id="equipment_ids" class="w-full p-2 border rounded"
-                                    multiple>
-                                    <?php foreach ($equipments as $equipment): ?>
-                                        <option value="<?= $equipment['id'] ?>">
-                                            <?php
-                                            if ($userRole === 'client') {
-                                                echo htmlspecialchars($equipment['type'] . ' - ' . $equipment['equipment_code']);
-                                            } else {
-                                                echo htmlspecialchars($equipment['client_name'] . ' - ' . $equipment['type'] . ' - ' . $equipment['equipment_code']);
-                                            }
-                                            ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <p class="text-gray-600 text-sm">
-                                    Mantenha Ctrl (Windows) ou Cmd (Mac) para selecionar múltiplos.
-                                </p>
-                            </div>
-                        <?php endif; ?>
-
-                        <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
-                            Abrir Chamado
-                        </button>
-                    </form>
-                </div>
+            <div class="mb-4">
+                <label for="service_id" class="block text-gray-700">Serviço</label>
+                <select name="service_id" id="service_id" class="w-full p-2 border rounded">
+                    <option value="">Selecione um serviço</option>
+                    <?php foreach($services as $s): ?>
+                        <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['service']) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
 
-        </div>
+            <div class="mb-4">
+                <label for="description" class="block text-gray-700">Descrição</label>
+                <textarea name="description" id="description" rows="4" class="w-full p-2 border rounded" placeholder="Descreva o problema"></textarea>
+            </div>
+
+            <?php if($userRole!=='client'): ?>
+            <div class="mb-4">
+                <label for="priority" class="block text-gray-700">Prioridade</label>
+                <select name="priority" id="priority" class="w-full p-2 border rounded">
+                    <option value="normal" selected>Normal</option>
+                    <option value="high">Alta</option>
+                </select>
+            </div>
+            <?php endif; ?>
+
+            <?php if(!empty($equipmentsAll)): ?>
+            <div class="mb-4">
+                <label for="equipment_ids" class="block text-gray-700">Equipamentos</label>
+                <select name="equipment_ids[]" id="equipment_ids" class="w-full p-2 border rounded" multiple>
+                    <?php foreach($equipmentsAll as $e): ?>
+                    <?php
+                        $label = ($userRole==='client')
+                            ? "{$e['type']} - {$e['equipment_code']}"
+                            : "{$e['client_name']} - {$e['type']} - {$e['equipment_code']}";
+                    ?>
+                    <option value="<?= $e['id'] ?>"><?= htmlspecialchars($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <p class="text-gray-600 text-sm">Ctrl/Cmd para múltipla seleção.</p>
+            </div>
+            <?php endif; ?>
+
+            <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Abrir Chamado</button>
+        </form>
     </div>
+</div>
 
-    <script>
-        const openModalButtons = document.querySelectorAll('#openModalButton');
-        const closeModalButton = document.getElementById('closeModalButton');
-        const modal = document.getElementById('modal');
+<script>
+    // Helpers
+    function toggleModal(id, show) {
+        document.getElementById(id).classList.toggle('hidden', !show);
+    }
 
-        openModalButtons.forEach(btn => {
-            btn.addEventListener('click', () => modal.classList.remove('hidden'));
-        });
-        closeModalButton.addEventListener('click', () => modal.classList.add('hidden'));
-        window.addEventListener('click', e => {
-            if (e.target === modal) {
-                modal.classList.add('hidden');
-            }
-        });
-    </script>
+    // Create
+    document.getElementById('btn-open-create').onclick = () => toggleModal('modal-create', true);
+    document.getElementById('close-create').onclick = () => toggleModal('modal-create', false);
+    window.addEventListener('click', e => {
+        if (e.target.id === 'modal-create') toggleModal('modal-create', false);
+    });
+
+    // Info, Edit, Delete buttons
+    document.querySelectorAll('.js-open-info').forEach(btn => {
+        btn.onclick = () => toggleModal('modal-info-' + btn.dataset.id, true);
+    });
+    document.querySelectorAll('.js-close-info').forEach(btn => {
+        btn.onclick = () => {
+            let id = btn.closest('div[id^="modal-info-"]').id.replace('modal-info-','');
+            toggleModal('modal-info-' + id, false);
+        };
+    });
+    window.addEventListener('click', e => {
+        if (e.target.id.startsWith('modal-info-')) toggleModal(e.target.id, false);
+    });
+
+    document.querySelectorAll('.js-open-edit').forEach(btn => {
+        btn.onclick = () => toggleModal('modal-edit-' + btn.dataset.id, true);
+    });
+    document.querySelectorAll('.js-close-edit').forEach(btn => {
+        btn.onclick = () => {
+            let id = btn.closest('div[id^="modal-edit-"]').id.replace('modal-edit-','');
+            toggleModal('modal-edit-' + id, false);
+        };
+    });
+    window.addEventListener('click', e => {
+        if (e.target.id.startsWith('modal-edit-')) toggleModal(e.target.id, false);
+    });
+
+    document.querySelectorAll('.js-open-delete').forEach(btn => {
+        btn.onclick = () => toggleModal('modal-delete-' + btn.dataset.id, true);
+    });
+    document.querySelectorAll('.js-close-delete').forEach(btn => {
+        btn.onclick = () => {
+            let id = btn.closest('div[id^="modal-delete-"]').id.replace('modal-delete-','');
+            toggleModal('modal-delete-' + id, false);
+        };
+    });
+    window.addEventListener('click', e => {
+        if (e.target.id.startsWith('modal-delete-')) toggleModal(e.target.id, false);
+    });
+</script>
 </body>
-
 </html>

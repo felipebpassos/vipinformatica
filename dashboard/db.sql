@@ -1,6 +1,6 @@
 DROP DATABASE vipinformatica;
 
-select * from users;
+select * from services;
 
 -- Criação do banco de dados
 CREATE DATABASE vipinformatica
@@ -21,7 +21,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Serviços (atualizado para ter apenas id e service)
+-- Serviços
 CREATE TABLE services (
     id INT PRIMARY KEY AUTO_INCREMENT,
     service ENUM(
@@ -32,7 +32,13 @@ CREATE TABLE services (
     ) NOT NULL UNIQUE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Equipamentos (para serviços de manutenção)
+INSERT INTO services (service) VALUES
+  ('Manutenção e conserto de equipamentos'),
+  ('Formatação e instalação de programas'),
+  ('Desenvolvimento de sites e sistemas'),
+  ('Consultoria em TI');
+
+-- Equipamentos
 CREATE TABLE equipment (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
@@ -49,7 +55,7 @@ CREATE TABLE equipment (
     FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Chamados/Tickets (atualizado com service_id e prioridade)
+-- Chamados/Tickets
 CREATE TABLE tickets (
     id INT PRIMARY KEY AUTO_INCREMENT,
     service_id INT NOT NULL,
@@ -64,7 +70,7 @@ CREATE TABLE tickets (
     FOREIGN KEY (service_id) REFERENCES services(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Tabela de relação entre Tickets e Equipamentos
+-- Relação Tickets ↔ Equipamentos
 CREATE TABLE ticket_equipment (
     ticket_id INT NOT NULL,
     equipment_id INT NOT NULL,
@@ -73,7 +79,7 @@ CREATE TABLE ticket_equipment (
     FOREIGN KEY (equipment_id) REFERENCES equipment(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Histórico/Updates dos Chamados
+-- Histórico de mensagens no ticket
 CREATE TABLE ticket_updates (
     id INT PRIMARY KEY AUTO_INCREMENT,
     ticket_id INT NOT NULL,
@@ -84,13 +90,14 @@ CREATE TABLE ticket_updates (
     FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Tabela de Log de Eventos (atualizada para incluir eventos de equipamento)
+-- Tabela de Log de Eventos
 CREATE TABLE event_logs (
     id INT PRIMARY KEY AUTO_INCREMENT,
     event_type ENUM(
         'ticket_created', 
         'ticket_updated', 
         'ticket_closed', 
+        'ticket_deleted',
         'user_created', 
         'user_updated', 
         'user_deleted',
@@ -107,242 +114,178 @@ CREATE TABLE event_logs (
     FOREIGN KEY (performed_by_user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Trigger para log de criação de usuário
 DELIMITER //
-CREATE TRIGGER user_create_log AFTER INSERT ON users
-FOR EACH ROW
-BEGIN
-    INSERT INTO event_logs (
-        event_type, 
-        entity_id, 
-        entity_type, 
-        performed_by_user_id,
-        is_client_action,
-        details
-    ) VALUES (
-        'user_created', 
-        NEW.id, 
-        'user', 
-        NEW.id,
-        NEW.role = 'client',
-        JSON_OBJECT(
-            'name', NEW.name,
-            'email', NEW.email,
-            'role', NEW.role
-        )
-    );
-END;//
-DELIMITER ;
 
--- Trigger para log de atualização de usuário
-DELIMITER //
-CREATE TRIGGER user_update_log AFTER UPDATE ON users
+-- Triggers de usuário
+CREATE TRIGGER user_create_log
+AFTER INSERT ON users
 FOR EACH ROW
 BEGIN
-    INSERT INTO event_logs (
-        event_type, 
-        entity_id, 
-        entity_type, 
-        performed_by_user_id,
-        is_client_action,
-        details
-    ) VALUES (
-        'user_updated', 
-        NEW.id, 
-        'user', 
-        @current_user_id,  
-        FALSE,
-        JSON_OBJECT(
-            'old_name', OLD.name, 
-            'new_name', NEW.name,
-            'old_email', OLD.email, 
-            'new_email', NEW.email, 
-            'old_role', OLD.role,
-            'new_role', NEW.role
-        )
+    DECLARE actor_is_client BOOLEAN DEFAULT FALSE;
+    SELECT role = 'client' INTO actor_is_client FROM users WHERE id = @current_user_id;
+    INSERT INTO event_logs(event_type, entity_id, entity_type, performed_by_user_id, is_client_action, details)
+    VALUES(
+      'user_created', NEW.id, 'user', @current_user_id, actor_is_client,
+      JSON_OBJECT('name', NEW.name, 'email', NEW.email, 'role', NEW.role)
     );
-END;//
-DELIMITER ;
+END;
+//
 
--- Trigger para log de deleção de usuário
-DELIMITER //
-CREATE TRIGGER user_delete_log BEFORE DELETE ON users
+CREATE TRIGGER user_update_log
+AFTER UPDATE ON users
 FOR EACH ROW
 BEGIN
-    INSERT INTO event_logs (
-        event_type, 
-        entity_id, 
-        entity_type, 
-        performed_by_user_id,
-        is_client_action,
-        details
-    ) VALUES (
-        'user_deleted', 
-        OLD.id, 
-        'user', 
-        @current_user_id,  
-        FALSE,
-        JSON_OBJECT(
-            'name', OLD.name,
-            'email', OLD.email,
-            'role', OLD.role
-        )
+    DECLARE actor_is_client BOOLEAN DEFAULT FALSE;
+    SELECT role = 'client' INTO actor_is_client FROM users WHERE id = @current_user_id;
+    INSERT INTO event_logs(event_type, entity_id, entity_type, performed_by_user_id, is_client_action, details)
+    VALUES(
+      'user_updated', NEW.id, 'user', @current_user_id, actor_is_client,
+      JSON_OBJECT(
+        'old_name', OLD.name, 'new_name', NEW.name,
+        'old_email', OLD.email, 'new_email', NEW.email,
+        'old_role', OLD.role, 'new_role', NEW.role
+      )
     );
-END;//
-DELIMITER ;
+END;
+//
 
--- Trigger para log de criação de chamado
-DELIMITER //
-CREATE TRIGGER ticket_create_log AFTER INSERT ON tickets
+CREATE TRIGGER user_delete_log
+BEFORE DELETE ON users
 FOR EACH ROW
 BEGIN
-    DECLARE is_client_created BOOLEAN;
-    
-    SELECT role = 'client' INTO is_client_created 
-    FROM users 
-    WHERE id = NEW.client_id;
-    
-    INSERT INTO event_logs (
-        event_type, 
-        entity_id, 
-        entity_type, 
-        performed_by_user_id, 
-        is_client_action,
-        details
-    ) VALUES (
-        'ticket_created', 
-        NEW.id, 
-        'ticket', 
-        NEW.client_id, 
-        is_client_created,
-        JSON_OBJECT(
-            'description', NEW.description,
-            'status', NEW.status,
-            'service_id', NEW.service_id,
-            'priority', NEW.priority
-        )
+    DECLARE actor_is_client BOOLEAN DEFAULT FALSE;
+    SELECT role = 'client' INTO actor_is_client FROM users WHERE id = @current_user_id;
+    INSERT INTO event_logs(event_type, entity_id, entity_type, performed_by_user_id, is_client_action, details)
+    VALUES(
+      'user_deleted', OLD.id, 'user', @current_user_id, actor_is_client,
+      JSON_OBJECT('name', OLD.name, 'email', OLD.email, 'role', OLD.role)
     );
-END;//
-DELIMITER ;
+END;
+//
 
--- Trigger para log de atualização de chamado
-DELIMITER //
-CREATE TRIGGER ticket_update_log AFTER UPDATE ON tickets
+-- Triggers de ticket
+CREATE TRIGGER ticket_create_log
+AFTER INSERT ON tickets
 FOR EACH ROW
 BEGIN
-    INSERT INTO event_logs (
-        event_type, 
-        entity_id, 
-        entity_type, 
-        performed_by_user_id,
-        is_client_action,
-        details
-    ) VALUES (
-        'ticket_updated', 
-        NEW.id, 
-        'ticket', 
-        @current_user_id,  
-        FALSE,
-        JSON_OBJECT(
-            'old_description', OLD.description, 
-            'new_description', NEW.description, 
-            'old_status', OLD.status,
-            'new_status', NEW.status,
-            'old_service_id', OLD.service_id,
-            'new_service_id', NEW.service_id,
-            'old_priority', OLD.priority,
-            'new_priority', NEW.priority
-        )
+    DECLARE actor_is_client BOOLEAN DEFAULT FALSE;
+    SELECT role = 'client' INTO actor_is_client FROM users WHERE id = @current_user_id;
+    INSERT INTO event_logs(event_type, entity_id, entity_type, performed_by_user_id, is_client_action, details)
+    VALUES(
+      'ticket_created', NEW.id, 'ticket', @current_user_id, actor_is_client,
+      JSON_OBJECT(
+        'client_id', NEW.client_id,
+        'description', NEW.description,
+        'status', NEW.status,
+        'service_id', NEW.service_id,
+        'priority', NEW.priority
+      )
     );
-END;//
-DELIMITER ;
+END;
+//
 
--- Trigger para log de criação de equipamento
-DELIMITER //
-CREATE TRIGGER equipment_create_log AFTER INSERT ON equipment
+CREATE TRIGGER ticket_update_log
+AFTER UPDATE ON tickets
 FOR EACH ROW
 BEGIN
-    DECLARE is_client_created BOOLEAN;
-    
-    SELECT role = 'client' INTO is_client_created 
-    FROM users 
-    WHERE id = NEW.user_id;
-    
-    INSERT INTO event_logs (
-        event_type, 
-        entity_id, 
-        entity_type, 
-        performed_by_user_id, 
-        is_client_action,
-        details
-    ) VALUES (
-        'equipment_created', 
-        NEW.id, 
-        'equipment', 
-        NEW.user_id, 
-        is_client_created,
-        JSON_OBJECT(
-            'type', NEW.type,
-            'equipment_code', NEW.equipment_code,
-            'user_id', NEW.user_id
-        )
-    );
-END;//
-DELIMITER ;
+    DECLARE actor_is_client BOOLEAN DEFAULT FALSE;
+    SELECT role = 'client' INTO actor_is_client FROM users WHERE id = @current_user_id;
 
--- Trigger para log de atualização de equipamento
-DELIMITER //
-CREATE TRIGGER equipment_update_log AFTER UPDATE ON equipment
-FOR EACH ROW
-BEGIN
-    INSERT INTO event_logs (
-        event_type, 
-        entity_id, 
-        entity_type, 
-        performed_by_user_id,
-        is_client_action,
-        details
-    ) VALUES (
-        'equipment_updated', 
-        NEW.id, 
-        'equipment', 
-        @current_user_id,  
-        FALSE,
-        JSON_OBJECT(
-            'old_type', OLD.type, 
-            'new_type', NEW.type,
-            'old_equipment_code', OLD.equipment_code, 
-            'new_equipment_code', NEW.equipment_code,
-            'old_user_id', OLD.user_id,
-            'new_user_id', NEW.user_id
-        )
-    );
-END;//
-DELIMITER ;
+    IF OLD.status <> NEW.status AND NEW.status = 'closed' THEN
+        INSERT INTO event_logs(event_type, entity_id, entity_type, performed_by_user_id, is_client_action, details)
+        VALUES(
+          'ticket_closed', NEW.id, 'ticket', @current_user_id, actor_is_client,
+          JSON_OBJECT('old_status', OLD.status, 'new_status', NEW.status, 'closed_at', NEW.closed_at)
+        );
+    ELSE
+        INSERT INTO event_logs(event_type, entity_id, entity_type, performed_by_user_id, is_client_action, details)
+        VALUES(
+          'ticket_updated', NEW.id, 'ticket', @current_user_id, actor_is_client,
+          JSON_OBJECT(
+            'old_description', OLD.description, 'new_description', NEW.description,
+            'old_status', OLD.status,           'new_status', NEW.status,
+            'old_service_id', OLD.service_id,   'new_service_id', NEW.service_id,
+            'old_priority', OLD.priority,       'new_priority', NEW.priority
+          )
+        );
+    END IF;
+END;
+//
 
--- Trigger para log de deleção de equipamento
-DELIMITER //
-CREATE TRIGGER equipment_delete_log BEFORE DELETE ON equipment
+CREATE TRIGGER ticket_delete_log
+BEFORE DELETE ON tickets
 FOR EACH ROW
 BEGIN
-    INSERT INTO event_logs (
-        event_type, 
-        entity_id, 
-        entity_type, 
-        performed_by_user_id,
-        is_client_action,
-        details
-    ) VALUES (
-        'equipment_deleted', 
-        OLD.id, 
-        'equipment', 
-        @current_user_id,  
-        FALSE,
-        JSON_OBJECT(
-            'type', OLD.type,
-            'equipment_code', OLD.equipment_code,
-            'user_id', OLD.user_id
-        )
+    DECLARE actor_is_client BOOLEAN DEFAULT FALSE;
+    SELECT role = 'client' INTO actor_is_client FROM users WHERE id = @current_user_id;
+    INSERT INTO event_logs(event_type, entity_id, entity_type, performed_by_user_id, is_client_action, details)
+    VALUES(
+      'ticket_deleted', OLD.id, 'ticket', @current_user_id, actor_is_client,
+      JSON_OBJECT(
+        'client_id', OLD.client_id,
+        'description', OLD.description,
+        'status', OLD.status,
+        'service_id', OLD.service_id,
+        'priority', OLD.priority
+      )
     );
-END;//
+END;
+//
+
+-- Triggers de equipamento
+CREATE TRIGGER equipment_create_log
+AFTER INSERT ON equipment
+FOR EACH ROW
+BEGIN
+    DECLARE actor_is_client BOOLEAN DEFAULT FALSE;
+    SELECT role = 'client' INTO actor_is_client FROM users WHERE id = @current_user_id;
+    INSERT INTO event_logs(event_type, entity_id, entity_type, performed_by_user_id, is_client_action, details)
+    VALUES(
+      'equipment_created', NEW.id, 'equipment', @current_user_id, actor_is_client,
+      JSON_OBJECT(
+        'type', NEW.type,
+        'equipment_code', NEW.equipment_code,
+        'user_id', NEW.user_id
+      )
+    );
+END;
+//
+
+CREATE TRIGGER equipment_update_log
+AFTER UPDATE ON equipment
+FOR EACH ROW
+BEGIN
+    DECLARE actor_is_client BOOLEAN DEFAULT FALSE;
+    SELECT role = 'client' INTO actor_is_client FROM users WHERE id = @current_user_id;
+    INSERT INTO event_logs(event_type, entity_id, entity_type, performed_by_user_id, is_client_action, details)
+    VALUES(
+      'equipment_updated', NEW.id, 'equipment', @current_user_id, actor_is_client,
+      JSON_OBJECT(
+        'old_type', OLD.type,
+        'new_type', NEW.type,
+        'old_equipment_code', OLD.equipment_code,
+        'new_equipment_code', NEW.equipment_code
+      )
+    );
+END;
+//
+
+CREATE TRIGGER equipment_delete_log
+BEFORE DELETE ON equipment
+FOR EACH ROW
+BEGIN
+    DECLARE actor_is_client BOOLEAN DEFAULT FALSE;
+    SELECT role = 'client' INTO actor_is_client FROM users WHERE id = @current_user_id;
+    INSERT INTO event_logs(event_type, entity_id, entity_type, performed_by_user_id, is_client_action, details)
+    VALUES(
+      'equipment_deleted', OLD.id, 'equipment', @current_user_id, actor_is_client,
+      JSON_OBJECT(
+        'type', OLD.type,
+        'equipment_code', OLD.equipment_code,
+        'user_id', OLD.user_id
+      )
+    );
+END;
+//
+
 DELIMITER ;
