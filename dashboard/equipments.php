@@ -22,12 +22,37 @@ $currentPage = isset($_GET['page']) && is_numeric($_GET['page'])
 if ($currentPage < 1) $currentPage = 1;
 $offset = ($currentPage - 1) * $perPage;
 
-// Conta total de equipamentos
-$countStmt = $conn->prepare("SELECT COUNT(*) AS total FROM equipment");
+// --- FILTROS ---
+$filter_client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : '';
+$filter_type = isset($_GET['type']) ? $_GET['type'] : '';
+
+// Monta WHERE dinâmico
+$where = [];
+$params = [];
+$types = '';
+if ($filter_client_id) {
+    $where[] = 'e.user_id = ?';
+    $params[] = $filter_client_id;
+    $types .= 'i';
+}
+if ($filter_type) {
+    $where[] = 'e.type = ?';
+    $params[] = $filter_type;
+    $types .= 's';
+}
+$whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
+
+// Conta total de equipamentos com filtro
+if ($filter_client_id || $filter_type) {
+    $countSql = "SELECT COUNT(*) AS total FROM equipment e $whereSql";
+    $countStmt = $conn->prepare($countSql);
+    if ($params) $countStmt->bind_param($types, ...$params);
+} else {
+    $countStmt = $conn->prepare("SELECT COUNT(*) AS total FROM equipment");
+}
 $countStmt->execute();
 $totalRecords = $countStmt->get_result()->fetch_assoc()['total'];
 $countStmt->close();
-
 $totalPages = (int) ceil($totalRecords / $perPage);
 
 // Trata ações de criação, edição e exclusão
@@ -101,15 +126,19 @@ while ($row = $res->fetch_assoc()) {
     $clients[] = $row;
 }
 
-// Carrega equipamentos paginados
-$stmt = $conn->prepare("
-    SELECT e.*, u.name AS client_name
-    FROM equipment e
-    JOIN users u ON e.user_id = u.id
-    ORDER BY u.name ASC, e.type ASC
-    LIMIT ? OFFSET ?
-");
-$stmt->bind_param("ii", $perPage, $offset);
+// Busca equipamentos paginados com filtro
+if ($filter_client_id || $filter_type) {
+    $sql = "SELECT e.*, u.name AS client_name FROM equipment e JOIN users u ON e.user_id = u.id $whereSql ORDER BY u.name ASC, e.type ASC LIMIT ? OFFSET ?";
+    $stmt = $conn->prepare($sql);
+    $bindParams = $params;
+    $bindTypes = $types . 'ii';
+    $bindParams[] = $perPage;
+    $bindParams[] = $offset;
+    $stmt->bind_param($bindTypes, ...$bindParams);
+} else {
+    $stmt = $conn->prepare("SELECT e.*, u.name AS client_name FROM equipment e JOIN users u ON e.user_id = u.id ORDER BY u.name ASC, e.type ASC LIMIT ? OFFSET ?");
+    $stmt->bind_param("ii", $perPage, $offset);
+}
 $stmt->execute();
 $equipments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
@@ -162,6 +191,38 @@ $stmt->close();
                         </ul>
                     </div>
                 <?php endif; ?>
+
+                <!-- Adicionar formulário de filtro acima da tabela, igual logs.php/index.php -->
+                <form method="GET" class="mb-4 flex flex-wrap gap-2 items-end">
+                    <div>
+                        <label class="block text-xs text-gray-600" for="client_id">Cliente</label>
+                        <select name="client_id" id="client_id" class="border rounded px-2 py-1">
+                            <option value="">Todos</option>
+                            <?php foreach ($clients as $c): ?>
+                                <option value="<?= $c['id'] ?>" <?= $filter_client_id == $c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600" for="type">Tipo</label>
+                        <select name="type" id="type" class="border rounded px-2 py-1">
+                            <option value="">Todos</option>
+                            <?php $types = ['Impressora','Monitor','Nobreak','Gabinete','Notebook','Periféricos','Outros'];
+                            foreach ($types as $t): ?>
+                                <option value="<?= $t ?>" <?= $filter_type === $t ? 'selected' : '' ?>><?= $t ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            document.querySelectorAll('form select').forEach(function (select) {
+                                select.addEventListener('change', function () {
+                                    this.form.submit();
+                                });
+                            });
+                        });
+                    </script>
+                </form>
 
                 <!-- Tabela de Equipamentos -->
                 <table class="min-w-full bg-white shadow-md rounded mb-0">

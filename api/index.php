@@ -1,8 +1,10 @@
 <?php
+
 require __DIR__ . '/vendor/autoload.php';
 require __DIR__ . '/config/Database.php';
 require __DIR__ . '/config/Mailer.php';
 require __DIR__ . '/models/User.php';
+require __DIR__ . '/models/Ticket.php';
 require __DIR__ . '/utils/helpers.php';
 
 use Dotenv\Dotenv;
@@ -10,6 +12,8 @@ use Dotenv\Dotenv;
 // Carregar variáveis de ambiente
 $dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->load();
+
+$requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
 // Configurações de CORS mais seguras
 $allowedOrigins = [
@@ -68,10 +72,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password = generateRandomPassword();
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
+        $pdo = Database::getInstance();
+
+        // Definimos um ator genérico para permitir o INSERT sem erro na trigger
+        $pdo->exec("SET @current_user_id = 14");
+
         $userId = User::createOrUpdate($name, $email, $phone, $passwordHash);
 
-        // informa ao MySQL quem está fazendo a ação para os triggers
-        $pdo = Database::getInstance();
+        // Agora sim definimos o ator real para as ações subsequentes
         $pdo->exec("SET @current_user_id = " . intval($userId));
 
         // agora cria o chamado usando o mesmo usuário como ator

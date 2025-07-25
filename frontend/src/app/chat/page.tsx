@@ -244,7 +244,7 @@ export default function TicketPage() {
     }
 
     useEffect(() => {
-        if (step==='done') {
+        if (step === 'done') {
             handleSubmitDone()
         }
     }, [step])

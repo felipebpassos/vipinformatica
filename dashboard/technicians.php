@@ -12,6 +12,10 @@ if ($userRole !== 'admin') {
     exit();
 }
 
+// --- BUSCA POR NOME ---
+$search = trim($_GET['search'] ?? '');
+$searchParam = '%' . $search . '%';
+
 // --- PAGINAÇÃO CONFIGURAÇÃO ---
 $perPage = 10;
 $currentPage = isset($_GET['page']) && is_numeric($_GET['page'])
@@ -22,12 +26,16 @@ if ($currentPage < 1) {
 }
 $offset = ($currentPage - 1) * $perPage;
 
-// Conta o total de técnicos
-$countStmt = $conn->prepare("SELECT COUNT(*) AS total FROM users WHERE role = 'technician'");
+// Conta o total de técnicos (considerando busca)
+if ($search !== '') {
+    $countStmt = $conn->prepare("SELECT COUNT(*) AS total FROM users WHERE role = 'technician' AND name LIKE ?");
+    $countStmt->bind_param("s", $searchParam);
+} else {
+    $countStmt = $conn->prepare("SELECT COUNT(*) AS total FROM users WHERE role = 'technician'");
+}
 $countStmt->execute();
 $totalRecords = $countStmt->get_result()->fetch_assoc()['total'];
 $countStmt->close();
-
 $totalPages = (int) ceil($totalRecords / $perPage);
 
 // Inicializa variável de erros
@@ -109,15 +117,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Carrega técnicos paginados
-$stmt = $conn->prepare("
-    SELECT id, name, email, phone, created_at
-    FROM users
-    WHERE role = 'technician'
-    ORDER BY created_at DESC
-    LIMIT ? OFFSET ?
-");
-$stmt->bind_param("ii", $perPage, $offset);
+// Carrega técnicos paginados (considerando busca)
+if ($search !== '') {
+    $stmt = $conn->prepare("
+        SELECT id, name, email, phone, created_at
+        FROM users
+        WHERE role = 'technician' AND name LIKE ?
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+    ");
+    $stmt->bind_param("sii", $searchParam, $perPage, $offset);
+} else {
+    $stmt = $conn->prepare("
+        SELECT id, name, email, phone, created_at
+        FROM users
+        WHERE role = 'technician'
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+    ");
+    $stmt->bind_param("ii", $perPage, $offset);
+}
 $stmt->execute();
 $technicians = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
@@ -171,6 +190,18 @@ $stmt->close();
                         </ul>
                     </div>
                 <?php endif; ?>
+
+                <!-- Formulário de busca -->
+                <form method="GET" action="technicians.php" class="mb-4 flex items-center">
+                    <input type="text" name="search" id="search" value="<?= htmlspecialchars($search) ?>"
+                        placeholder="Buscar por nome" class="w-full max-w-xs p-2 border rounded mr-2">
+                    <button type="submit" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mr-2">
+                        Buscar
+                    </button>
+                    <?php if ($search !== ''): ?>
+                        <a href="technicians.php" class="text-gray-500 hover:underline">Limpar</a>
+                    <?php endif; ?>
+                </form>
 
                 <!-- Tabela de técnicos -->
                 <table class="min-w-full bg-white shadow-md rounded mb-0">
@@ -339,7 +370,7 @@ $stmt->close();
                             <ul class="inline-flex items-center -space-x-px mt-2">
                                 <?php for ($p = 1; $p <= $totalPages; $p++): ?>
                                     <li>
-                                        <a href="?page=<?= $p ?>" class="px-3 py-2 border text-sm font-medium
+                                        <a href="?page=<?= $p ?>&search=<?= urlencode($search) ?>" class="px-3 py-2 border text-sm font-medium
                                           <?= $p === $currentPage
                                               ? 'bg-red-500 text-white border-red-500'
                                               : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-100' ?>">

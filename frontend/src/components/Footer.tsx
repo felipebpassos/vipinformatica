@@ -67,8 +67,8 @@ export default function Footer() {
                 <div className="text-gray-400 text-sm">
                     <p>Av. Hipólito da Costa, 78 - Centro<br />
                         Aracaju - SE, 49097-310</p>
-                    <p className="mt-4">contato@techsol.com</p>
-                    <p className="mt-2">(79) 99676-1012</p>
+                    <p className="mt-4">contato@vipltda.com.br</p>
+                    <p className="mt-2">+55 (79) 3027-2614</p>
                 </div>
             </div>
 

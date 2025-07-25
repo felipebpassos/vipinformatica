@@ -13,17 +13,35 @@ if (!in_array($userRole, ['admin', 'technician'])) {
     exit();
 }
 
+// --- BUSCA POR NOME ---
+$search = trim($_GET['search'] ?? '');
+$searchParam = '%' . $search . '%';
+
 // --- PAGINAÇÃO CONFIGURAÇÃO ---
 $perPage = 10;
 $currentPage = isset($_GET['page']) && is_numeric($_GET['page'])
     ? (int) $_GET['page']
     : 1;
-if ($currentPage < 1)
+if ($currentPage < 1) {
     $currentPage = 1;
+}
 $offset = ($currentPage - 1) * $perPage;
 
-// Conta o total de clientes
-$countStmt = $conn->prepare("SELECT COUNT(*) AS total FROM users WHERE role = 'client'");
+// Conta o total de clientes (considerando busca)
+if ($search !== '') {
+    $countStmt = $conn->prepare("
+        SELECT COUNT(*) AS total
+        FROM users
+        WHERE role = 'client' AND name LIKE ?
+    ");
+    $countStmt->bind_param("s", $searchParam);
+} else {
+    $countStmt = $conn->prepare("
+        SELECT COUNT(*) AS total
+        FROM users
+        WHERE role = 'client'
+    ");
+}
 $countStmt->execute();
 $totalRecords = $countStmt->get_result()->fetch_assoc()['total'];
 $countStmt->close();
@@ -45,14 +63,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $phone = trim($_POST['phone'] ?? '');
         $password = $_POST['password'] ?? '';
 
-        if (empty($name))
+        if (empty($name)) {
             $errors[] = 'Informe o nome.';
-        if (empty($email))
+        }
+        if (empty($email)) {
             $errors[] = 'Informe o email.';
-        elseif (!filter_var($email, FILTER_VALIDATE_EMAIL))
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors[] = 'Email inválido.';
-        if (empty($password))
+        }
+        if (empty($password)) {
             $errors[] = 'Informe a senha.';
+        }
 
         if (empty($errors)) {
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
@@ -64,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             if ($stmt->execute()) {
                 $stmt->close();
-                header("Location: clients.php?page={$currentPage}&success=Cliente+criado+com+sucesso");
+                header("Location: clients.php?page={$currentPage}&search=" . urlencode($search) . "&success=Cliente+criado+com+sucesso");
                 exit;
             } else {
                 $errors[] = 'Erro ao criar cliente: ' . $stmt->error;
@@ -78,12 +99,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $email = trim($_POST['email'] ?? '');
         $phone = trim($_POST['phone'] ?? '');
 
-        if (empty($name))
+        if (empty($name)) {
             $errors[] = 'Informe o nome.';
-        if (empty($email))
+        }
+        if (empty($email)) {
             $errors[] = 'Informe o email.';
-        elseif (!filter_var($email, FILTER_VALIDATE_EMAIL))
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors[] = 'Email inválido.';
+        }
 
         if (empty($errors)) {
             $stmt = $conn->prepare("
@@ -95,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             if ($stmt->execute()) {
                 $stmt->close();
-                header("Location: clients.php?page={$currentPage}&success=Cliente+atualizado+com+sucesso");
+                header("Location: clients.php?page={$currentPage}&search=" . urlencode($search) . "&success=Cliente+atualizado+com+sucesso");
                 exit;
             } else {
                 $errors[] = 'Erro ao atualizar cliente: ' . $stmt->error;
@@ -106,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         // exclusão de cliente
         $clientId = intval($_POST['client_id']);
         if ($conn->query("DELETE FROM users WHERE id = {$clientId} AND role = 'client'")) {
-            header("Location: clients.php?page={$currentPage}&success=Cliente+excluído+com+sucesso");
+            header("Location: clients.php?page={$currentPage}&search=" . urlencode($search) . "&success=Cliente+excluído+com+sucesso");
             exit;
         } else {
             $errors[] = 'Erro ao excluir cliente: ' . $conn->error;
@@ -114,20 +137,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Carrega clientes paginados
-$stmt = $conn->prepare("
-    SELECT id, name, email, phone, created_at
-    FROM users
-    WHERE role = 'client'
-    ORDER BY created_at DESC
-    LIMIT ? OFFSET ?
-");
-$stmt->bind_param("ii", $perPage, $offset);
+// Carrega clientes paginados (considerando busca)
+if ($search !== '') {
+    $stmt = $conn->prepare("
+        SELECT id, name, email, phone, created_at
+        FROM users
+        WHERE role = 'client' AND name LIKE ?
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+    ");
+    $stmt->bind_param("sii", $searchParam, $perPage, $offset);
+} else {
+    $stmt = $conn->prepare("
+        SELECT id, name, email, phone, created_at
+        FROM users
+        WHERE role = 'client'
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+    ");
+    $stmt->bind_param("ii", $perPage, $offset);
+}
 $stmt->execute();
 $clients = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// --- hoje segue o HTML + JS ---
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -145,7 +178,6 @@ $stmt->close();
     <div class="flex">
         <?php include 'includes/sidebar.php'; ?>
         <div class="container mx-32 flex-1 px-8 py-6">
-
             <!-- Breadcrumb -->
             <nav class="flex items-center text-gray-600 mb-4">
                 <i class="fas fa-home mr-2"></i><span>Home</span>
@@ -162,6 +194,18 @@ $stmt->close();
                         <i class="fas fa-plus"></i> Novo cliente
                     </button>
                 </div>
+
+                <!-- Formulário de busca -->
+                <form method="GET" action="clients.php" class="mb-4 flex items-center">
+                    <input type="text" name="search" id="search" value="<?= htmlspecialchars($search) ?>"
+                        placeholder="Buscar por nome" class="w-full max-w-xs p-2 border rounded mr-2">
+                    <button type="submit" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mr-2">
+                        Buscar
+                    </button>
+                    <?php if ($search !== ''): ?>
+                        <a href="clients.php" class="text-gray-500 hover:underline">Limpar</a>
+                    <?php endif; ?>
+                </form>
 
                 <!-- Sucesso / Erros -->
                 <?php if (isset($_GET['success'])): ?>
@@ -274,7 +318,8 @@ $stmt->close();
                                     <button
                                         class="js-close-edit absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
                                     <h2 class="text-xl font-bold mb-4">Editar Cliente #<?= $c['id'] ?></h2>
-                                    <form action="clients.php?page=<?= $currentPage ?>" method="POST">
+                                    <form action="clients.php?page=<?= $currentPage ?>&search=<?= urlencode($search) ?>"
+                                        method="POST">
                                         <input type="hidden" name="action" value="edit_client">
                                         <input type="hidden" name="client_id" value="<?= $c['id'] ?>">
 
@@ -310,8 +355,8 @@ $stmt->close();
                                         class="js-close-delete absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
                                     <h2 class="text-xl font-bold mb-4">Excluir Cliente #<?= $c['id'] ?></h2>
                                     <p class="mb-4">Você tem certeza que deseja excluir este cliente?</p>
-                                    <form action="clients.php?page=<?= $currentPage ?>" method="POST"
-                                        class="flex justify-end space-x-2">
+                                    <form action="clients.php?page=<?= $currentPage ?>&search=<?= urlencode($search) ?>"
+                                        method="POST" class="flex justify-end space-x-2">
                                         <input type="hidden" name="action" value="delete_client">
                                         <input type="hidden" name="client_id" value="<?= $c['id'] ?>">
                                         <button type="button"
@@ -344,10 +389,10 @@ $stmt->close();
                             <ul class="inline-flex items-center -space-x-px mt-2">
                                 <?php for ($p = 1; $p <= $totalPages; $p++): ?>
                                     <li>
-                                        <a href="?page=<?= $p ?>" class="px-3 py-2 border text-sm font-medium
-                                              <?= $p === $currentPage
-                                                  ? 'bg-red-500 text-white border-red-500'
-                                                  : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-100' ?>">
+                                        <a href="?page=<?= $p ?>&search=<?= urlencode($search) ?>" class="px-3 py-2 border text-sm font-medium
+                                                <?= $p === $currentPage
+                                                    ? 'bg-red-500 text-white border-red-500'
+                                                    : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-100' ?>">
                                             <?= $p ?>
                                         </a>
                                     </li>
@@ -364,7 +409,7 @@ $stmt->close();
                 <div class="bg-white p-6 rounded-lg w-full max-w-md relative overflow-auto max-h-screen">
                     <button id="close-create" class="absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
                     <h2 class="text-xl font-bold mb-4">Novo Cliente</h2>
-                    <form action="clients.php?page=<?= $currentPage ?>" method="POST">
+                    <form action="clients.php?page=<?= $currentPage ?>&search=<?= urlencode($search) ?>" method="POST">
                         <input type="hidden" name="action" value="create_client">
                         <div class="mb-4">
                             <label for="name" class="block text-gray-700">Nome</label>

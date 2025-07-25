@@ -34,7 +34,7 @@ export default function WhatsAppButton() {
 
             <div className={`whatsapp-box ${showButton ? 'show' : ''}`}>
                 <a
-                    href="https://api.whatsapp.com/send/?phone=557996761012&text&type=phone_number&app_absent=0"
+                    href="https://api.whatsapp.com/send/?phone=557930272614&text&type=phone_number&app_absent=0"
                     className="whatsapp-button"
                     target="_blank"
                     rel="noopener noreferrer"

@@ -1,12 +1,13 @@
 <?php
 class Ticket
 {
-    public static function create($clientId, $serviceType, $priority = 'normal')
+    public static function create($clientId, $serviceType, $priority = 'normal', $description = null)
     {
         $pdo = Database::getInstance();
 
         // informa ao MySQL quem está criando o ticket
         $pdo->exec("SET @current_user_id = " . intval($clientId));
+
         // Verifica se o serviço é válido
         $stmt = $pdo->prepare("SELECT id FROM services WHERE service = ?");
         $stmt->execute([$serviceType]);
@@ -17,15 +18,8 @@ class Ticket
         }
 
         // Cria o ticket
-        $stmt = $pdo->prepare("INSERT INTO tickets 
-                             (client_id, service_id, priority) 
-                             VALUES (?, ?, ?, ?, ?)");
-
-        $stmt->execute([
-            $clientId,
-            $serviceId,
-            $priority
-        ]);
+        $stmt = $pdo->prepare("INSERT INTO tickets (client_id, service_id, priority, description) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$clientId, $serviceId, $priority, $description]);
 
         return $pdo->lastInsertId();
     }

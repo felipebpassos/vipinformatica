@@ -17,10 +17,58 @@ if ($currentPage < 1) {
 }
 $offset = ($currentPage - 1) * $perPage;
 
-// Conta o total de chamados
+// --- FILTROS ---
+$filter_client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : '';
+$filter_service_id = isset($_GET['service_id']) ? intval($_GET['service_id']) : '';
+$filter_priority = isset($_GET['priority']) ? $_GET['priority'] : '';
+$filter_status = isset($_GET['status']) ? $_GET['status'] : '';
+$filter_period = isset($_GET['period']) ? $_GET['period'] : 'all';
+
+// Monta WHERE dinâmico
+$where = [];
+$params = [];
+$types = '';
 if ($userRole === 'client') {
-    $countStmt = $conn->prepare("SELECT COUNT(*) AS total FROM tickets WHERE client_id = ?");
-    $countStmt->bind_param("i", $userId);
+    $where[] = 't.client_id = ?';
+    $params[] = $userId;
+    $types .= 'i';
+} else {
+    if ($filter_client_id) {
+        $where[] = 't.client_id = ?';
+        $params[] = $filter_client_id;
+        $types .= 'i';
+    }
+}
+if ($filter_service_id) {
+    $where[] = 't.service_id = ?';
+    $params[] = $filter_service_id;
+    $types .= 'i';
+}
+if ($filter_priority) {
+    $where[] = 't.priority = ?';
+    $params[] = $filter_priority;
+    $types .= 's';
+}
+if ($filter_status) {
+    $where[] = 't.status = ?';
+    $params[] = $filter_status;
+    $types .= 's';
+}
+// Filtro de período
+if ($filter_period === 'today') {
+    $where[] = 'DATE(t.created_at) = CURDATE()';
+} elseif ($filter_period === '7days') {
+    $where[] = 't.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+} elseif ($filter_period === '30days') {
+    $where[] = 't.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
+}
+$whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
+
+// Conta o total de chamados com filtro
+if ($userRole === 'client' || $filter_client_id || $filter_service_id || $filter_priority || $filter_status || $filter_period !== 'all') {
+    $countSql = "SELECT COUNT(*) AS total FROM tickets t $whereSql";
+    $countStmt = $conn->prepare($countSql);
+    if ($params) $countStmt->bind_param($types, ...$params);
 } else {
     $countStmt = $conn->prepare("SELECT COUNT(*) AS total FROM tickets");
 }
@@ -168,26 +216,21 @@ if ($userRole === 'client') {
     }
 }
 
-// Busca chamados paginados
-if ($userRole === 'client') {
-    $stmt = $conn->prepare("
-        SELECT t.*, s.service
-        FROM tickets t
-        JOIN services s ON t.service_id = s.id
-        WHERE t.client_id = ?
-        ORDER BY t.created_at DESC
-        LIMIT ? OFFSET ?
-    ");
-    $stmt->bind_param("iii", $userId, $perPage, $offset);
+// Busca chamados paginados com filtro
+if ($userRole === 'client' || $filter_client_id || $filter_service_id || $filter_priority || $filter_status || $filter_period !== 'all') {
+    if ($userRole === 'client') {
+        $sql = "SELECT t.*, s.service FROM tickets t JOIN services s ON t.service_id = s.id $whereSql ORDER BY t.created_at DESC LIMIT ? OFFSET ?";
+    } else {
+        $sql = "SELECT t.*, s.service, u.name AS client_name FROM tickets t JOIN services s ON t.service_id = s.id JOIN users u ON t.client_id = u.id $whereSql ORDER BY t.created_at DESC LIMIT ? OFFSET ?";
+    }
+    $stmt = $conn->prepare($sql);
+    $bindParams = $params;
+    $bindTypes = $types . 'ii';
+    $bindParams[] = $perPage;
+    $bindParams[] = $offset;
+    $stmt->bind_param($bindTypes, ...$bindParams);
 } else {
-    $stmt = $conn->prepare("
-        SELECT t.*, s.service, u.name AS client_name
-        FROM tickets t
-        JOIN services s ON t.service_id = s.id
-        JOIN users u ON t.client_id = u.id
-        ORDER BY t.created_at DESC
-        LIMIT ? OFFSET ?
-    ");
+    $stmt = $conn->prepare("SELECT t.*, s.service, u.name AS client_name FROM tickets t JOIN services s ON t.service_id = s.id JOIN users u ON t.client_id = u.id ORDER BY t.created_at DESC LIMIT ? OFFSET ?");
     $stmt->bind_param("ii", $perPage, $offset);
 }
 $stmt->execute();
@@ -262,6 +305,68 @@ $statusMap = [
         </span>
     </div>
 <?php endif; ?>
+
+                <?php
+                // Adicionar formulário de filtro acima da tabela, igual logs.php
+                ?>
+                <form method="GET" class="mb-4 flex flex-wrap gap-2 items-end">
+                    <?php if ($userRole !== 'client'): ?>
+                        <div>
+                            <label class="block text-xs text-gray-600" for="client_id">Cliente</label>
+                            <select name="client_id" id="client_id" class="border rounded px-2 py-1">
+                                <option value="">Todos</option>
+                                <?php foreach ($clients as $c): ?>
+                                    <option value="<?= $c['id'] ?>" <?= $filter_client_id == $c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    <?php endif; ?>
+                    <div>
+                        <label class="block text-xs text-gray-600" for="service_id">Serviço</label>
+                        <select name="service_id" id="service_id" class="border rounded px-2 py-1">
+                            <option value="">Todos</option>
+                            <?php foreach ($services as $s): ?>
+                                <option value="<?= $s['id'] ?>" <?= $filter_service_id == $s['id'] ? 'selected' : '' ?>><?= htmlspecialchars($s['service']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600" for="priority">Prioridade</label>
+                        <select name="priority" id="priority" class="border rounded px-2 py-1">
+                            <option value="">Todas</option>
+                            <?php foreach ($priorityMap as $val => $label): ?>
+                                <option value="<?= $val ?>" <?= $filter_priority === $val ? 'selected' : '' ?>><?= $label ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600" for="status">Status</label>
+                        <select name="status" id="status" class="border rounded px-2 py-1">
+                            <option value="">Todos</option>
+                            <?php foreach ($statusMap as $val => $label): ?>
+                                <option value="<?= $val ?>" <?= $filter_status === $val ? 'selected' : '' ?>><?= $label ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600" for="period">Período</label>
+                        <select name="period" id="period" class="border rounded px-2 py-1">
+                            <option value="today" <?= $filter_period === 'today' ? 'selected' : '' ?>>Hoje</option>
+                            <option value="7days" <?= $filter_period === '7days' ? 'selected' : '' ?>>Últimos 7 dias</option>
+                            <option value="30days" <?= $filter_period === '30days' ? 'selected' : '' ?>>Últimos 30 dias</option>
+                            <option value="all" <?= $filter_period === 'all' ? 'selected' : '' ?>>Sempre</option>
+                        </select>
+                    </div>
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            document.querySelectorAll('form select').forEach(function (select) {
+                                select.addEventListener('change', function () {
+                                    this.form.submit();
+                                });
+                            });
+                        });
+                    </script>
+                </form>
 
                 <table class="min-w-full bg-white shadow-md rounded mb-0">
                     <thead>
@@ -360,7 +465,7 @@ $statusMap = [
                                                 while ($e = $eqs->fetch_assoc()) {
                                                     $label = ($userRole === 'client')
                                                         ? "{$e['type']} - {$e['equipment_code']}"
-                                                        : "{$e['client_name']} - {$e['type']} - {$e['equipment_code']}";
+                                                        : "{$t['client_name']} - {$e['type']} - {$e['equipment_code']}";
                                                     echo "<li>" . htmlspecialchars($label) . "</li>";
                                                 }
                                                 echo '</ul>';
