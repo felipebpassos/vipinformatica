@@ -11,6 +11,137 @@ if (!in_array($_SESSION['user_role'], ['admin', 'technician'])) {
     exit();
 }
 
+// --- ARRAYS DE TRADUÇÃO ---
+$eventTypeTranslations = [
+    'ticket_created' => 'Chamado Criado',
+    'ticket_updated' => 'Chamado Atualizado',
+    'ticket_closed' => 'Chamado Fechado',
+    'ticket_deleted' => 'Chamado Excluído',
+    'user_created' => 'Usuário Criado',
+    'user_updated' => 'Usuário Atualizado',
+    'user_deleted' => 'Usuário Excluído',
+    'equipment_created' => 'Equipamento Criado',
+    'equipment_updated' => 'Equipamento Atualizado',
+    'equipment_deleted' => 'Equipamento Excluído'
+];
+
+$entityTypeTranslations = [
+    'ticket' => 'Chamado',
+    'user' => 'Usuário',
+    'equipment' => 'Equipamento'
+];
+
+$statusTranslations = [
+    'open' => 'Aberto',
+    'in_progress' => 'Em Andamento',
+    'closed' => 'Fechado'
+];
+
+$priorityTranslations = [
+    'normal' => 'Normal',
+    'high' => 'Alta'
+];
+
+$roleTranslations = [
+    'admin' => 'Administrador',
+    'technician' => 'Técnico',
+    'client' => 'Cliente'
+];
+
+$equipmentTypeTranslations = [
+    'Impressora' => 'Impressora',
+    'Monitor' => 'Monitor',
+    'Nobreak' => 'Nobreak',
+    'Gabinete' => 'Gabinete',
+    'Notebook' => 'Notebook',
+    'Periféricos' => 'Periféricos',
+    'Outros' => 'Outros'
+];
+
+// Função para traduzir valores
+function translateValue($value, $translations)
+{
+    return isset($translations[$value]) ? $translations[$value] : $value;
+}
+
+// Função para formatar data/hora
+function formatDateTime($datetime)
+{
+    $date = new DateTime($datetime);
+    return $date->format('d/m/Y H:i:s');
+}
+
+// Função para processar e traduzir detalhes JSON
+function formatDetails($details, $eventType)
+{
+    global $statusTranslations, $priorityTranslations, $roleTranslations, $equipmentTypeTranslations;
+
+    if (empty($details)) {
+        return 'Nenhum detalhe disponível';
+    }
+
+    $data = json_decode($details, true);
+    if (!$data) {
+        return htmlspecialchars($details);
+    }
+
+    $formatted = [];
+
+    foreach ($data as $key => $value) {
+        // Pular valores vazios ou nulos
+        if (empty($value) && $value !== '0') {
+            continue;
+        }
+
+        $translatedKey = translateKey($key);
+        $translatedValue = translateValue($value, $statusTranslations);
+        if ($translatedValue === $value) {
+            $translatedValue = translateValue($value, $priorityTranslations);
+        }
+        if ($translatedValue === $value) {
+            $translatedValue = translateValue($value, $roleTranslations);
+        }
+        if ($translatedValue === $value) {
+            $translatedValue = translateValue($value, $equipmentTypeTranslations);
+        }
+        if ($translatedValue === $value) {
+            $translatedValue = $value;
+        }
+
+        $formatted[] = "<strong>{$translatedKey}:</strong> " . htmlspecialchars($translatedValue);
+    }
+
+    return implode("\n", $formatted);
+}
+
+// Função para traduzir chaves dos detalhes
+function translateKey($key)
+{
+    $keyTranslations = [
+        'name' => 'Nome',
+        'email' => 'E-mail',
+        'role' => 'Perfil',
+        'old_name' => 'Nome Anterior',
+        'new_name' => 'Nome Novo',
+        'old_email' => 'E-mail Anterior',
+        'new_email' => 'E-mail Novo',
+        'old_role' => 'Perfil Anterior',
+        'new_role' => 'Perfil Novo',
+        'client_id' => 'ID do Cliente',
+        'description' => 'Descrição',
+        'status' => 'Status',
+        'old_status' => 'Status Anterior',
+        'new_status' => 'Status Novo',
+        'service_id' => 'ID do Serviço',
+        'priority' => 'Prioridade',
+        'closed_at' => 'Fechado em',
+        'type' => 'Tipo',
+        'equipment_code' => 'Código do Equipamento'
+    ];
+
+    return isset($keyTranslations[$key]) ? $keyTranslations[$key] : ucfirst(str_replace('_', ' ', $key));
+}
+
 // --- FILTROS ---
 $filterEventType = isset($_GET['event_type']) ? trim($_GET['event_type']) : '';
 $filterUserId = isset($_GET['performed_by']) ? intval($_GET['performed_by']) : 0;
@@ -137,7 +268,7 @@ $stmt->close();
                             <select name="event_type" id="event_type" class="border rounded px-2 py-1">
                                 <option value="">Todos</option>
                                 <?php foreach ($eventTypes as $et): ?>
-                                    <option value="<?= htmlspecialchars($et) ?>" <?= $filterEventType === $et ? 'selected' : '' ?>><?= htmlspecialchars($et) ?></option>
+                                    <option value="<?= htmlspecialchars($et) ?>" <?= $filterEventType === $et ? 'selected' : '' ?>><?= htmlspecialchars(translateValue($et, $eventTypeTranslations)) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -209,14 +340,21 @@ $stmt->close();
                     <tbody>
                         <?php foreach ($logs as $log): ?>
                             <tr class="text-center border-t align-top">
-                                <td class="py-2 px-4"><?= htmlspecialchars($log['event_type']) ?></td>
-                                <td class="py-2 px-4"><?= htmlspecialchars($log['entity_type']) ?></td>
+                                <td class="py-2 px-4">
+                                    <?= htmlspecialchars(translateValue($log['event_type'], $eventTypeTranslations)) ?>
+                                </td>
+                                <td class="py-2 px-4">
+                                    <?= htmlspecialchars(translateValue($log['entity_type'], $entityTypeTranslations)) ?>
+                                </td>
                                 <td class="py-2 px-4"><?= $log['entity_id'] ?></td>
                                 <td class="py-2 px-4"><?= htmlspecialchars($log['performed_by']) ?></td>
                                 <td class="py-2 px-4"><?= $log['is_client_action'] ? 'Sim' : 'Não' ?></td>
-                                <td class="py-2 px-4"><?= $log['created_at'] ?></td>
-                                <td class="py-2 px-4 text-left max-w-xs">
-                                    <pre class="whitespace-pre-wrap text-xs"><?= htmlspecialchars($log['details']) ?></pre>
+                                <td class="py-2 px-4"><?= formatDateTime($log['created_at']) ?></td>
+                                <td class="py-2 px-4">
+                                    <button onclick="openDetailsModal(<?= htmlspecialchars(json_encode($log)) ?>)"
+                                        class="text-gray-400 hover:text-gray-500 transition-colors">
+                                        <i class="fas fa-file-alt text-lg"></i>
+                                    </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -257,6 +395,165 @@ $stmt->close();
             </div>
         </div>
     </div>
+
+    <!-- Modal de Detalhes -->
+    <div id="detailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+                <div class="flex items-center justify-between p-6 border-b">
+                    <h3 class="text-lg font-semibold text-gray-900">Detalhes do Evento</h3>
+                    <button onclick="closeDetailsModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto max-h-[60vh]">
+                    <div id="modalContent" class="space-y-4">
+                        <!-- Conteúdo será preenchido via JavaScript -->
+                    </div>
+                </div>
+                <div class="flex justify-end p-6 border-t">
+                    <button onclick="closeDetailsModal()"
+                        class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openDetailsModal(logData) {
+            const modal = document.getElementById('detailsModal');
+            const content = document.getElementById('modalContent');
+
+            // Traduzir os valores para exibição
+            const eventTypeTranslations = <?= json_encode($eventTypeTranslations) ?>;
+            const entityTypeTranslations = <?= json_encode($entityTypeTranslations) ?>;
+            const statusTranslations = <?= json_encode($statusTranslations) ?>;
+            const priorityTranslations = <?= json_encode($priorityTranslations) ?>;
+            const roleTranslations = <?= json_encode($roleTranslations) ?>;
+            const equipmentTypeTranslations = <?= json_encode($equipmentTypeTranslations) ?>;
+
+            function translateValue(value, translations) {
+                return translations[value] || value;
+            }
+
+            function formatDateTime(datetime) {
+                const date = new Date(datetime);
+                return date.toLocaleString('pt-BR');
+            }
+
+            function formatDetails(details, eventType) {
+                if (!details) {
+                    return 'Nenhum detalhe disponível';
+                }
+
+                try {
+                    const data = JSON.parse(details);
+                    if (!data) {
+                        return details;
+                    }
+
+                    const keyTranslations = {
+                        'name': 'Nome',
+                        'email': 'E-mail',
+                        'role': 'Perfil',
+                        'old_name': 'Nome Anterior',
+                        'new_name': 'Nome Novo',
+                        'old_email': 'E-mail Anterior',
+                        'new_email': 'E-mail Novo',
+                        'old_role': 'Perfil Anterior',
+                        'new_role': 'Perfil Novo',
+                        'client_id': 'ID do Cliente',
+                        'description': 'Descrição',
+                        'status': 'Status',
+                        'old_status': 'Status Anterior',
+                        'new_status': 'Status Novo',
+                        'service_id': 'ID do Serviço',
+                        'priority': 'Prioridade',
+                        'closed_at': 'Fechado em',
+                        'type': 'Tipo',
+                        'equipment_code': 'Código do Equipamento'
+                    };
+
+                    function translateKey(key) {
+                        return keyTranslations[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    }
+
+                    const formatted = [];
+                    for (const [key, value] of Object.entries(data)) {
+                        if (value === null || value === '' || value === undefined) continue;
+
+                        const translatedKey = translateKey(key);
+                        let translatedValue = translateValue(value, statusTranslations);
+                        if (translatedValue === value) {
+                            translatedValue = translateValue(value, priorityTranslations);
+                        }
+                        if (translatedValue === value) {
+                            translatedValue = translateValue(value, roleTranslations);
+                        }
+                        if (translatedValue === value) {
+                            translatedValue = translateValue(value, equipmentTypeTranslations);
+                        }
+                        if (translatedValue === value) {
+                            translatedValue = value;
+                        }
+
+                        formatted.push(`<div><strong>${translatedKey}:</strong> ${translatedValue}</div>`);
+                    }
+
+                    return formatted.join('');
+                } catch (e) {
+                    return details;
+                }
+            }
+
+            // Montar o conteúdo do modal
+            const modalHtml = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h4 class="font-semibold text-gray-700 mb-2">Informações Gerais</h4>
+                        <div class="space-y-2 text-sm">
+                            <div><strong>Tipo de Evento:</strong> ${translateValue(logData.event_type, eventTypeTranslations)}</div>
+                            <div><strong>Entidade:</strong> ${translateValue(logData.entity_type, entityTypeTranslations)}</div>
+                            <div><strong>ID da Entidade:</strong> ${logData.entity_id}</div>
+                            <div><strong>Realizado por:</strong> ${logData.performed_by}</div>
+                            <div><strong>Ação do Cliente:</strong> ${logData.is_client_action ? 'Sim' : 'Não'}</div>
+                            <div><strong>Data/Hora:</strong> ${formatDateTime(logData.created_at)}</div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-700 mb-2">Detalhes Específicos</h4>
+                        <div class="text-sm space-y-1">
+                            ${formatDetails(logData.details, logData.event_type)}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            content.innerHTML = modalHtml;
+            modal.classList.remove('hidden');
+        }
+
+        function closeDetailsModal() {
+            const modal = document.getElementById('detailsModal');
+            modal.classList.add('hidden');
+        }
+
+        // Fechar modal ao clicar fora dele
+        document.getElementById('detailsModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeDetailsModal();
+            }
+        });
+
+        // Fechar modal com tecla ESC
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeDetailsModal();
+            }
+        });
+    </script>
 </body>
 
 </html>

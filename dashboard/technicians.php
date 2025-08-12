@@ -258,13 +258,13 @@ $stmt->close();
                                 </td>
                                 <td class="py-2 px-4 space-x-2">
                                     <button class="js-open-info" data-id="<?= $t['id'] ?>">
-                                        <i class="fas fa-info-circle text-gray-400"></i>
+                                        <i class="fas fa-info-circle text-gray-400 hover:text-gray-500"></i>
                                     </button>
                                     <button class="js-open-edit" data-id="<?= $t['id'] ?>">
-                                        <i class="fas fa-edit text-gray-400"></i>
+                                        <i class="fas fa-edit text-gray-400 hover:text-gray-500"></i>
                                     </button>
                                     <button class="js-open-delete" data-id="<?= $t['id'] ?>">
-                                        <i class="fas fa-trash text-red-500"></i>
+                                        <i class="fas fa-trash text-red-500 hover:text-red-600"></i>
                                     </button>
                                 </td>
                             </tr>

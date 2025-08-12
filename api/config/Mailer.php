@@ -21,7 +21,7 @@ class Mailer
             $mail->addAddress($toEmail);
             $mail->isHTML(true);
             $mail->CharSet = 'UTF-8';
-            $mail->Subject = 'Confirmação de Abertura de Chamado - VIP Informática';
+            $mail->Subject = 'Confirmação de Abertura de Chamado - VIP.com Informática';
             $mail->Body = "
                 <h1>Seu chamado foi registrado com sucesso!</h1>
                 <p>Olá {$toName},</p>
@@ -32,7 +32,7 @@ class Mailer
                 <a href='{$_ENV['LOGIN_URL']}'>{$_ENV['LOGIN_URL']}</a></p>
                 <p>Sua senha de acesso:</p>
                 <p><strong>Senha:</strong> {$password}</p>
-                <p>Atenciosamente,<br>Equipe VIP Informática</p>
+                <p>Atenciosamente,<br>Equipe VIP.com Informática</p>
             ";
 
             $mail->AltBody = "Chamado aberto para: {$serviceType}\n\nNossa equipe entrará em contato em breve.\n\nAcesse: {$_ENV['LOGIN_URL']}";

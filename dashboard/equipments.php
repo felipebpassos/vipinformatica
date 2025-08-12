@@ -15,11 +15,12 @@ if (!in_array($userRole, ['admin', 'technician'])) {
 $errors = [];
 
 // --- PAGINAÇÃO CONFIGURAÇÃO ---
-$perPage     = 10;
+$perPage = 10;
 $currentPage = isset($_GET['page']) && is_numeric($_GET['page'])
     ? (int) $_GET['page']
     : 1;
-if ($currentPage < 1) $currentPage = 1;
+if ($currentPage < 1)
+    $currentPage = 1;
 $offset = ($currentPage - 1) * $perPage;
 
 // --- FILTROS ---
@@ -46,7 +47,8 @@ $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 if ($filter_client_id || $filter_type) {
     $countSql = "SELECT COUNT(*) AS total FROM equipment e $whereSql";
     $countStmt = $conn->prepare($countSql);
-    if ($params) $countStmt->bind_param($types, ...$params);
+    if ($params)
+        $countStmt->bind_param($types, ...$params);
 } else {
     $countStmt = $conn->prepare("SELECT COUNT(*) AS total FROM equipment");
 }
@@ -61,13 +63,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = $_POST['action'];
 
     if ($action === 'create_equipment') {
-        $userId        = intval($_POST['user_id'] ?? 0);
-        $type          = $_POST['type'] ?? '';
+        $userId = intval($_POST['user_id'] ?? 0);
+        $type = $_POST['type'] ?? '';
         $equipmentCode = trim($_POST['equipment_code'] ?? '');
 
-        if ($userId <= 0)           $errors[] = 'Selecione um cliente.';
-        if (empty($type))           $errors[] = 'Selecione o tipo de equipamento.';
-        if (empty($equipmentCode))  $errors[] = 'Informe o código do equipamento.';
+        if ($userId <= 0)
+            $errors[] = 'Selecione um cliente.';
+        if (empty($type))
+            $errors[] = 'Selecione o tipo de equipamento.';
+        if (empty($equipmentCode))
+            $errors[] = 'Informe o código do equipamento.';
 
         if (empty($errors)) {
             $stmt = $conn->prepare("
@@ -84,14 +89,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
 
     } elseif ($action === 'edit_equipment') {
-        $eqId          = intval($_POST['equipment_id']);
-        $userId        = intval($_POST['user_id'] ?? 0);
-        $type          = $_POST['type'] ?? '';
+        $eqId = intval($_POST['equipment_id']);
+        $userId = intval($_POST['user_id'] ?? 0);
+        $type = $_POST['type'] ?? '';
         $equipmentCode = trim($_POST['equipment_code'] ?? '');
 
-        if ($userId <= 0)           $errors[] = 'Selecione um cliente.';
-        if (empty($type))           $errors[] = 'Selecione o tipo de equipamento.';
-        if (empty($equipmentCode))  $errors[] = 'Informe o código do equipamento.';
+        if ($userId <= 0)
+            $errors[] = 'Selecione um cliente.';
+        if (empty($type))
+            $errors[] = 'Selecione o tipo de equipamento.';
+        if (empty($equipmentCode))
+            $errors[] = 'Informe o código do equipamento.';
 
         if (empty($errors)) {
             $stmt = $conn->prepare("
@@ -119,12 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Lista de clientes para select
-$clients = [];
-$res = $conn->query("SELECT id, name FROM users WHERE role = 'client' ORDER BY name ASC");
-while ($row = $res->fetch_assoc()) {
-    $clients[] = $row;
-}
+// Lista de clientes não é mais necessária - busca via AJAX
 
 // Busca equipamentos paginados com filtro
 if ($filter_client_id || $filter_type) {
@@ -145,15 +148,16 @@ $stmt->close();
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Equipamentos | Vip Informática</title>
     <link rel="icon" type="image/png" href="./assets/img/icon.png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
+
 <body class="bg-gray-100">
     <div class="flex">
         <?php include 'includes/sidebar.php'; ?>
@@ -171,7 +175,7 @@ $stmt->close();
                 <div class="flex justify-between items-center mb-4">
                     <h1 class="text-base font-bold">Equipamentos</h1>
                     <button id="btn-open-create"
-                            class="bg-red-500 text-white text-sm px-4 py-2 rounded hover:bg-red-600 flex items-center gap-2">
+                        class="bg-red-500 text-white text-sm px-4 py-2 rounded hover:bg-red-600 flex items-center gap-2">
                         <i class="fas fa-plus"></i> Novo equipamento
                     </button>
                 </div>
@@ -193,21 +197,30 @@ $stmt->close();
                 <?php endif; ?>
 
                 <!-- Adicionar formulário de filtro acima da tabela, igual logs.php/index.php -->
-                <form method="GET" class="mb-4 flex flex-wrap gap-2 items-end">
-                    <div>
+                <form method="GET" class="mb-4 flex flex-wrap gap-2 items-end" id="filter-form">
+                    <div class="relative">
                         <label class="block text-xs text-gray-600" for="client_id">Cliente</label>
-                        <select name="client_id" id="client_id" class="border rounded px-2 py-1">
-                            <option value="">Todos</option>
-                            <?php foreach ($clients as $c): ?>
-                                <option value="<?= $c['id'] ?>" <?= $filter_client_id == $c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                        <div class="flex">
+                            <input type="text" name="client_search" id="client_search"
+                                placeholder="Digite para buscar..." class="border rounded px-2 py-1 w-48"
+                                autocomplete="off">
+                            <?php if ($filter_client_id): ?>
+                                <button type="button" id="clear_client_filter"
+                                    class="ml-1 px-2 py-1 bg-gray-300 text-gray-600 rounded hover:bg-gray-400 text-xs">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            <?php endif; ?>
+                        </div>
+                        <input type="hidden" name="client_id" id="client_id" value="<?= $filter_client_id ?>">
+                        <div id="client_search_results"
+                            class="absolute bg-white border rounded shadow-lg hidden max-h-48 overflow-y-auto z-10 w-48 top-full left-0">
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-600" for="type">Tipo</label>
                         <select name="type" id="type" class="border rounded px-2 py-1">
                             <option value="">Todos</option>
-                            <?php $types = ['Impressora','Monitor','Nobreak','Gabinete','Notebook','Periféricos','Outros'];
+                            <?php $types = ['Impressora', 'Monitor', 'Nobreak', 'Gabinete', 'Notebook', 'Periféricos', 'Outros'];
                             foreach ($types as $t): ?>
                                 <option value="<?= $t ?>" <?= $filter_type === $t ? 'selected' : '' ?>><?= $t ?></option>
                             <?php endforeach; ?>
@@ -215,7 +228,8 @@ $stmt->close();
                     </div>
                     <script>
                         document.addEventListener('DOMContentLoaded', function () {
-                            document.querySelectorAll('form select').forEach(function (select) {
+                            // Aplicar apenas aos selects do formulário de filtro
+                            document.querySelectorAll('#filter-form select').forEach(function (select) {
                                 select.addEventListener('change', function () {
                                     this.form.submit();
                                 });
@@ -253,16 +267,16 @@ $stmt->close();
                                 <td class="py-2 px-4 space-x-2">
                                     <!-- Info -->
                                     <button class="js-open-info" data-id="<?= $eq['id'] ?>">
-                                        <i class="fas fa-info-circle text-gray-400"></i>
+                                        <i class="fas fa-info-circle text-gray-400 hover:text-gray-500"></i>
                                     </button>
                                     <!-- Edit -->
                                     <button class="js-open-edit" data-id="<?= $eq['id'] ?>">
-                                        <i class="fas fa-edit text-gray-400"></i>
+                                        <i class="fas fa-edit text-gray-400 hover:text-gray-500"></i>
                                     </button>
                                     <!-- Delete (só admin) -->
                                     <?php if ($userRole === 'admin'): ?>
                                         <button class="js-open-delete" data-id="<?= $eq['id'] ?>">
-                                            <i class="fas fa-trash text-red-500"></i>
+                                            <i class="fas fa-trash text-red-500 hover:text-red-600"></i>
                                         </button>
                                     <?php endif; ?>
                                 </td>
@@ -270,9 +284,10 @@ $stmt->close();
 
                             <!-- Info Modal -->
                             <div id="modal-info-<?= $eq['id'] ?>"
-                                 class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
+                                class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
                                 <div class="bg-white p-6 rounded-lg w-full max-w-lg relative">
-                                    <button class="js-close-info absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
+                                    <button
+                                        class="js-close-info absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
                                     <h2 class="text-xl font-bold mb-4">
                                         Detalhes do Equipamento #<?= $eq['id'] ?>
                                     </h2>
@@ -291,9 +306,10 @@ $stmt->close();
 
                             <!-- Edit Modal -->
                             <div id="modal-edit-<?= $eq['id'] ?>"
-                                 class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
+                                class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
                                 <div class="bg-white p-6 rounded-lg w-full max-w-md relative overflow-auto max-h-screen">
-                                    <button class="js-close-edit absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
+                                    <button
+                                        class="js-close-edit absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
                                     <h2 class="text-xl font-bold mb-4">
                                         Editar Equipamento #<?= $eq['id'] ?>
                                     </h2>
@@ -301,29 +317,28 @@ $stmt->close();
                                         <input type="hidden" name="action" value="edit_equipment">
                                         <input type="hidden" name="equipment_id" value="<?= $eq['id'] ?>">
 
-                                        <div class="mb-4">
-                                            <label for="user_id_<?= $eq['id'] ?>" class="block text-gray-700">Cliente</label>
-                                            <select name="user_id" id="user_id_<?= $eq['id'] ?>"
-                                                    class="w-full p-2 border rounded">
-                                                <option value="">Selecione um cliente</option>
-                                                <?php foreach ($clients as $c): ?>
-                                                    <option value="<?= $c['id'] ?>"
-                                                        <?= $c['id'] === $eq['user_id'] ? 'selected' : '' ?>>
-                                                        <?= htmlspecialchars($c['name']) ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
+                                        <div class="mb-4 relative">
+                                            <label for="user_id_<?= $eq['id'] ?>"
+                                                class="block text-gray-700">Cliente</label>
+                                            <input type="text" name="client_search_modal"
+                                                id="client_search_modal_<?= $eq['id'] ?>"
+                                                placeholder="Digite para buscar..." class="w-full p-2 border rounded"
+                                                autocomplete="off">
+                                            <input type="hidden" name="user_id" id="user_id_<?= $eq['id'] ?>"
+                                                value="<?= $eq['user_id'] ?>">
+                                            <div id="client_search_results_modal_<?= $eq['id'] ?>"
+                                                class="absolute bg-white border rounded shadow-lg hidden max-h-48 overflow-y-auto z-10 w-full top-full left-0">
+                                            </div>
                                         </div>
 
                                         <div class="mb-4">
                                             <label for="type_<?= $eq['id'] ?>" class="block text-gray-700">Tipo</label>
                                             <select name="type" id="type_<?= $eq['id'] ?>"
-                                                    class="w-full p-2 border rounded">
+                                                class="w-full p-2 border rounded">
                                                 <?php
-                                                $types = ['Impressora','Monitor','Nobreak','Gabinete','Notebook','Periféricos','Outros'];
+                                                $types = ['Impressora', 'Monitor', 'Nobreak', 'Gabinete', 'Notebook', 'Periféricos', 'Outros'];
                                                 foreach ($types as $t): ?>
-                                                    <option value="<?= $t ?>"
-                                                        <?= $eq['type'] === $t ? 'selected' : '' ?>>
+                                                    <option value="<?= $t ?>" <?= $eq['type'] === $t ? 'selected' : '' ?>>
                                                         <?= $t ?>
                                                     </option>
                                                 <?php endforeach; ?>
@@ -331,16 +346,15 @@ $stmt->close();
                                         </div>
 
                                         <div class="mb-4">
-                                            <label for="equipment_code_<?= $eq['id'] ?>" class="block text-gray-700">Código</label>
-                                            <input type="text"
-                                                   name="equipment_code"
-                                                   id="equipment_code_<?= $eq['id'] ?>"
-                                                   value="<?= htmlspecialchars($eq['equipment_code']) ?>"
-                                                   class="w-full p-2 border rounded">
+                                            <label for="equipment_code_<?= $eq['id'] ?>"
+                                                class="block text-gray-700">Código</label>
+                                            <input type="text" name="equipment_code" id="equipment_code_<?= $eq['id'] ?>"
+                                                value="<?= htmlspecialchars($eq['equipment_code']) ?>"
+                                                class="w-full p-2 border rounded">
                                         </div>
 
                                         <button type="submit"
-                                                class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                                            class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
                                             Salvar alterações
                                         </button>
                                     </form>
@@ -349,22 +363,24 @@ $stmt->close();
 
                             <!-- Delete Modal -->
                             <div id="modal-delete-<?= $eq['id'] ?>"
-                                 class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
+                                class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
                                 <div class="bg-white p-6 rounded-lg w-full max-w-sm relative">
-                                    <button class="js-close-delete absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
+                                    <button
+                                        class="js-close-delete absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
                                     <h2 class="text-xl font-bold mb-4">
                                         Excluir Equipamento #<?= $eq['id'] ?>
                                     </h2>
                                     <p class="mb-4">Tem certeza que deseja excluir este equipamento?</p>
-                                    <form action="equipments.php?page=<?= $currentPage ?>" method="POST" class="flex justify-end space-x-2">
+                                    <form action="equipments.php?page=<?= $currentPage ?>" method="POST"
+                                        class="flex justify-end space-x-2">
                                         <input type="hidden" name="action" value="delete_equipment">
                                         <input type="hidden" name="equipment_id" value="<?= $eq['id'] ?>">
                                         <button type="button"
-                                                class="px-4 py-2 rounded border hover:bg-gray-100 js-close-delete">
+                                            class="px-4 py-2 rounded border hover:bg-gray-100 js-close-delete">
                                             Cancelar
                                         </button>
                                         <button type="submit"
-                                                class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                                            class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
                                             Excluir
                                         </button>
                                     </form>
@@ -380,7 +396,7 @@ $stmt->close();
                     <div class="text-sm text-gray-700">
                         <?php
                         $start = $totalRecords > 0 ? $offset + 1 : 0;
-                        $end   = $offset + count($equipments);
+                        $end = $offset + count($equipments);
                         echo "{$start} a {$end} de {$totalRecords} registros";
                         ?>
                     </div>
@@ -389,8 +405,7 @@ $stmt->close();
                             <ul class="inline-flex items-center -space-x-px mt-2">
                                 <?php for ($p = 1; $p <= $totalPages; $p++): ?>
                                     <li>
-                                        <a href="?page=<?= $p ?>"
-                                           class="px-3 py-2 border text-sm font-medium
+                                        <a href="?page=<?= $p ?>" class="px-3 py-2 border text-sm font-medium
                                               <?= $p === $currentPage
                                                   ? 'bg-red-500 text-white border-red-500'
                                                   : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-100' ?>">
@@ -405,20 +420,22 @@ $stmt->close();
             </div>
 
             <!-- Create Modal -->
-            <div id="modal-create" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
+            <div id="modal-create"
+                class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
                 <div class="bg-white p-6 rounded-lg w-full max-w-md relative overflow-auto max-h-screen">
                     <button id="close-create" class="absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
                     <h2 class="text-xl font-bold mb-4">Novo Equipamento</h2>
                     <form action="equipments.php?page=<?= $currentPage ?>" method="POST">
                         <input type="hidden" name="action" value="create_equipment">
-                        <div class="mb-4">
+                        <div class="mb-4 relative">
                             <label for="user_id" class="block text-gray-700">Cliente</label>
-                            <select name="user_id" id="user_id" class="w-full p-2 border rounded">
-                                <option value="">Selecione um cliente</option>
-                                <?php foreach ($clients as $c): ?>
-                                    <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['name']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <input type="text" name="client_search_modal" id="client_search_modal"
+                                placeholder="Digite para buscar..." class="w-full p-2 border rounded"
+                                autocomplete="off">
+                            <input type="hidden" name="user_id" id="user_id" value="">
+                            <div id="client_search_results_modal"
+                                class="absolute bg-white border rounded shadow-lg hidden max-h-48 overflow-y-auto z-10 w-full top-full left-0">
+                            </div>
                         </div>
                         <div class="mb-4">
                             <label for="type" class="block text-gray-700">Tipo</label>
@@ -436,10 +453,9 @@ $stmt->close();
                         <div class="mb-4">
                             <label for="equipment_code" class="block text-gray-700">Código</label>
                             <input type="text" name="equipment_code" id="equipment_code"
-                                   class="w-full p-2 border rounded" placeholder="Código do equipamento">
+                                class="w-full p-2 border rounded" placeholder="Código do equipamento">
                         </div>
-                        <button type="submit"
-                                class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                        <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
                             Criar Equipamento
                         </button>
                     </form>
@@ -456,8 +472,8 @@ $stmt->close();
         }
 
         // Create
-        document.getElementById('btn-open-create').onclick = ()   => toggleModal('modal-create', true);
-        document.getElementById('close-create').onclick     = ()  => toggleModal('modal-create', false);
+        document.getElementById('btn-open-create').onclick = () => toggleModal('modal-create', true);
+        document.getElementById('close-create').onclick = () => toggleModal('modal-create', false);
         window.addEventListener('click', e => {
             if (e.target.id === 'modal-create') toggleModal('modal-create', false);
         });
@@ -468,7 +484,7 @@ $stmt->close();
         });
         document.querySelectorAll('.js-close-info').forEach(btn => {
             btn.onclick = () => {
-                const id = btn.closest('[id^="modal-info-"]').id.replace('modal-info-','');
+                const id = btn.closest('[id^="modal-info-"]').id.replace('modal-info-', '');
                 toggleModal('modal-info-' + id, false);
             };
         });
@@ -483,7 +499,7 @@ $stmt->close();
         });
         document.querySelectorAll('.js-close-edit').forEach(btn => {
             btn.onclick = () => {
-                const id = btn.closest('[id^="modal-edit-"]').id.replace('modal-edit-','');
+                const id = btn.closest('[id^="modal-edit-"]').id.replace('modal-edit-', '');
                 toggleModal('modal-edit-' + id, false);
             };
         });
@@ -498,7 +514,7 @@ $stmt->close();
         });
         document.querySelectorAll('.js-close-delete').forEach(btn => {
             btn.onclick = () => {
-                const id = btn.closest('[id^="modal-delete-"]').id.replace('modal-delete-','');
+                const id = btn.closest('[id^="modal-delete-"]').id.replace('modal-delete-', '');
                 toggleModal('modal-delete-' + id, false);
             };
         });
@@ -507,5 +523,162 @@ $stmt->close();
                 toggleModal(e.target.id, false);
         });
     </script>
+
+    <script>
+        // Client search functionality
+        document.addEventListener('DOMContentLoaded', function () {
+            let searchTimeout;
+
+            // Function to search clients
+            function searchClients(searchTerm, resultsContainer, inputField, hiddenField) {
+                if (searchTerm.length < 2) {
+                    resultsContainer.classList.add('hidden');
+                    return;
+                }
+
+                fetch('search_clients.php?term=' + encodeURIComponent(searchTerm))
+                    .then(response => response.json())
+                    .then(data => {
+                        resultsContainer.innerHTML = '';
+
+                        if (data.length === 0) {
+                            resultsContainer.innerHTML = '<div class="p-2 text-gray-500">Nenhum cliente encontrado</div>';
+                        } else {
+                            data.forEach(client => {
+                                const div = document.createElement('div');
+                                div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b';
+                                div.textContent = client.name;
+                                div.onclick = function () {
+                                    inputField.value = client.name;
+                                    hiddenField.value = client.id;
+                                    resultsContainer.classList.add('hidden');
+
+                                    // Auto-submit form for filter
+                                    if (inputField.id === 'client_search') {
+                                        inputField.form.submit();
+                                    }
+                                };
+                                resultsContainer.appendChild(div);
+                            });
+                        }
+
+                        resultsContainer.classList.remove('hidden');
+                    })
+                    .catch(error => {
+                        console.error('Erro na busca:', error);
+                        resultsContainer.innerHTML = '<div class="p-2 text-red-500">Erro na busca</div>';
+                        resultsContainer.classList.remove('hidden');
+                    });
+            }
+
+            // Filter form client search
+            const clientSearch = document.getElementById('client_search');
+            const clientSearchResults = document.getElementById('client_search_results');
+            const clientIdHidden = document.getElementById('client_id');
+
+            if (clientSearch) {
+                clientSearch.addEventListener('input', function () {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        searchClients(this.value, clientSearchResults, this, clientIdHidden);
+                    }, 300);
+
+                    // Clear filter if input is empty
+                    if (this.value.length === 0) {
+                        clientIdHidden.value = '';
+                        this.form.submit();
+                    }
+                });
+
+                // Hide results when clicking outside
+                document.addEventListener('click', function (e) {
+                    if (!clientSearch.contains(e.target) && !clientSearchResults.contains(e.target)) {
+                        clientSearchResults.classList.add('hidden');
+                    }
+                });
+
+                // Clear client filter button
+                const clearClientFilter = document.getElementById('clear_client_filter');
+                if (clearClientFilter) {
+                    clearClientFilter.addEventListener('click', function () {
+                        clientSearch.value = '';
+                        clientIdHidden.value = '';
+                        clientSearchResults.classList.add('hidden');
+                        clientSearch.form.submit();
+                    });
+                }
+            }
+
+            // Modal client search (create)
+            const clientSearchModal = document.getElementById('client_search_modal');
+            const clientSearchResultsModal = document.getElementById('client_search_results_modal');
+            const clientIdHiddenModal = document.getElementById('user_id');
+
+            if (clientSearchModal) {
+                clientSearchModal.addEventListener('input', function () {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        searchClients(this.value, clientSearchResultsModal, this, clientIdHiddenModal);
+                    }, 300);
+                });
+
+                // Hide results when clicking outside
+                document.addEventListener('click', function (e) {
+                    if (!clientSearchModal.contains(e.target) && !clientSearchResultsModal.contains(e.target)) {
+                        clientSearchResultsModal.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Edit modals client search
+            document.querySelectorAll('[id^="client_search_modal_"]').forEach(function (input) {
+                const modalId = input.id.replace('client_search_modal_', '');
+                const resultsContainer = document.getElementById('client_search_results_modal_' + modalId);
+                const hiddenField = document.getElementById('user_id_' + modalId);
+
+                input.addEventListener('input', function () {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        searchClients(this.value, resultsContainer, this, hiddenField);
+                    }, 300);
+                });
+
+                // Hide results when clicking outside
+                document.addEventListener('click', function (e) {
+                    if (!input.contains(e.target) && !resultsContainer.contains(e.target)) {
+                        resultsContainer.classList.add('hidden');
+                    }
+                });
+            });
+
+            // Set current client name in filter if exists
+            <?php if ($filter_client_id): ?>
+                fetch('search_clients.php?id=<?= $filter_client_id ?>')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            clientSearch.value = data[0].name;
+                        }
+                    });
+            <?php endif; ?>
+
+            // Set current client names in edit modals
+            <?php foreach ($equipments as $eq): ?>
+                <?php if ($eq['user_id']): ?>
+                    fetch('search_clients.php?id=<?= $eq['user_id'] ?>')
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.length > 0) {
+                                const input = document.getElementById('client_search_modal_<?= $eq['id'] ?>');
+                                if (input) {
+                                    input.value = data[0].name;
+                                }
+                            }
+                        });
+                <?php endif; ?>
+            <?php endforeach; ?>
+        });
+    </script>
 </body>
+
 </html>

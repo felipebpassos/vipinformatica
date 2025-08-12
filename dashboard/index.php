@@ -199,11 +199,6 @@ if ($userRole === 'client') {
         $equipmentsAll[] = $row;
     }
 } else {
-    $clients = [];
-    $res = $conn->query("SELECT id, name FROM users WHERE role = 'client' ORDER BY name ASC");
-    while ($row = $res->fetch_assoc()) {
-        $clients[] = $row;
-    }
     $equipmentsAll = [];
     $res = $conn->query("
         SELECT e.*, u.name AS client_name
@@ -311,14 +306,19 @@ $statusMap = [
                 ?>
                 <form method="GET" class="mb-4 flex flex-wrap gap-2 items-end">
                     <?php if ($userRole !== 'client'): ?>
-                        <div>
+                        <div class="relative">
                             <label class="block text-xs text-gray-600" for="client_id">Cliente</label>
-                            <select name="client_id" id="client_id" class="border rounded px-2 py-1">
-                                <option value="">Todos</option>
-                                <?php foreach ($clients as $c): ?>
-                                    <option value="<?= $c['id'] ?>" <?= $filter_client_id == $c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['name']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <div class="flex">
+                                <input type="text" name="client_search" id="client_search" placeholder="Digite para buscar..." 
+                                       class="border rounded px-2 py-1 w-48" autocomplete="off">
+                                <?php if ($filter_client_id): ?>
+                                    <button type="button" id="clear_client_filter" class="ml-1 px-2 py-1 bg-gray-300 text-gray-600 rounded hover:bg-gray-400 text-xs">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                            <input type="hidden" name="client_id" id="client_id" value="<?= $filter_client_id ?>">
+                            <div id="client_search_results" class="absolute bg-white border rounded shadow-lg hidden max-h-48 overflow-y-auto z-10 w-48 top-full left-0"></div>
                         </div>
                     <?php endif; ?>
                     <div>
@@ -407,24 +407,24 @@ $statusMap = [
                                 <td class="py-2 px-4 space-x-2">
     <?php if ($userRole === 'client'): ?>
         <button class="js-open-info" data-id="<?= $t['id'] ?>">
-            <i class="fas fa-info-circle text-gray-400"></i>
+            <i class="fas fa-info-circle text-gray-400 hover:text-gray-500"></i>
         </button>
     <?php elseif ($userRole === 'technician'): ?>
         <button class="js-open-info" data-id="<?= $t['id'] ?>">
-            <i class="fas fa-info-circle text-gray-400"></i>
+            <i class="fas fa-info-circle text-gray-400 hover:text-gray-500"></i>
         </button>
         <button class="js-open-edit" data-id="<?= $t['id'] ?>">
-            <i class="fas fa-edit text-gray-400"></i>
+            <i class="fas fa-edit text-gray-400 hover:text-gray-500"></i>
         </button>
     <?php elseif ($userRole === 'admin'): ?>
         <button class="js-open-info" data-id="<?= $t['id'] ?>">
-            <i class="fas fa-info-circle text-gray-400"></i>
+            <i class="fas fa-info-circle text-gray-400 hover:text-gray-500"></i>
         </button>
         <button class="js-open-edit" data-id="<?= $t['id'] ?>">
-            <i class="fas fa-edit text-gray-400"></i>
+            <i class="fas fa-edit text-gray-400 hover:text-gray-500"></i>
         </button>
         <button class="js-open-delete" data-id="<?= $t['id'] ?>">
-            <i class="fas fa-trash text-red-500"></i>
+            <i class="fas fa-trash text-red-500 hover:text-red-600"></i>
         </button>
     <?php endif; ?>
 </td>
@@ -631,14 +631,12 @@ $statusMap = [
         <form action="index.php?page=<?= $currentPage?>" method="POST">
             <input type="hidden" name="action" value="create_ticket">
             <?php if($userRole!=='client'): ?>
-            <div class="mb-4">
+            <div class="mb-4 relative">
                 <label for="client_id" class="block text-gray-700">Cliente</label>
-                <select name="client_id" id="client_id" class="w-full p-2 border rounded">
-                    <option value="">Selecione um cliente</option>
-                    <?php foreach($clients as $c): ?>
-                        <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <input type="text" name="client_search_modal" id="client_search_modal" placeholder="Digite para buscar..." 
+                       class="w-full p-2 border rounded" autocomplete="off">
+                <input type="hidden" name="client_id" id="client_id_modal" value="">
+                <div id="client_search_results_modal" class="absolute bg-white border rounded shadow-lg hidden max-h-48 overflow-y-auto z-10 w-full top-full left-0"></div>
             </div>
             <?php endif; ?>
 
@@ -741,6 +739,125 @@ $statusMap = [
     window.addEventListener('click', e => {
         if (e.target.id.startsWith('modal-delete-')) toggleModal(e.target.id, false);
     });
+</script>
+
+<script>
+// Client search functionality
+document.addEventListener('DOMContentLoaded', function() {
+    let searchTimeout;
+    
+    // Function to search clients
+    function searchClients(searchTerm, resultsContainer, inputField, hiddenField) {
+        if (searchTerm.length < 2) {
+            resultsContainer.classList.add('hidden');
+            return;
+        }
+        
+        fetch('search_clients.php?term=' + encodeURIComponent(searchTerm))
+            .then(response => response.json())
+            .then(data => {
+                resultsContainer.innerHTML = '';
+                
+                if (data.length === 0) {
+                    resultsContainer.innerHTML = '<div class="p-2 text-gray-500">Nenhum cliente encontrado</div>';
+                } else {
+                    data.forEach(client => {
+                        const div = document.createElement('div');
+                        div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b';
+                        div.textContent = client.name;
+                        div.onclick = function() {
+                            inputField.value = client.name;
+                            hiddenField.value = client.id;
+                            resultsContainer.classList.add('hidden');
+                            
+                            // Auto-submit form for filter
+                            if (inputField.id === 'client_search') {
+                                inputField.form.submit();
+                            }
+                        };
+                        resultsContainer.appendChild(div);
+                    });
+                }
+                
+                resultsContainer.classList.remove('hidden');
+            })
+            .catch(error => {
+                console.error('Erro na busca:', error);
+                resultsContainer.innerHTML = '<div class="p-2 text-red-500">Erro na busca</div>';
+                resultsContainer.classList.remove('hidden');
+            });
+    }
+    
+    // Filter form client search
+    const clientSearch = document.getElementById('client_search');
+    const clientSearchResults = document.getElementById('client_search_results');
+    const clientIdHidden = document.getElementById('client_id');
+    
+    if (clientSearch) {
+        clientSearch.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchClients(this.value, clientSearchResults, this, clientIdHidden);
+            }, 300);
+            
+            // Clear filter if input is empty
+            if (this.value.length === 0) {
+                clientIdHidden.value = '';
+                this.form.submit();
+            }
+        });
+        
+        // Hide results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!clientSearch.contains(e.target) && !clientSearchResults.contains(e.target)) {
+                clientSearchResults.classList.add('hidden');
+            }
+        });
+        
+        // Clear client filter button
+        const clearClientFilter = document.getElementById('clear_client_filter');
+        if (clearClientFilter) {
+            clearClientFilter.addEventListener('click', function() {
+                clientSearch.value = '';
+                clientIdHidden.value = '';
+                clientSearchResults.classList.add('hidden');
+                clientSearch.form.submit();
+            });
+        }
+    }
+    
+    // Modal client search
+    const clientSearchModal = document.getElementById('client_search_modal');
+    const clientSearchResultsModal = document.getElementById('client_search_results_modal');
+    const clientIdHiddenModal = document.getElementById('client_id_modal');
+    
+    if (clientSearchModal) {
+        clientSearchModal.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchClients(this.value, clientSearchResultsModal, this, clientIdHiddenModal);
+            }, 300);
+        });
+        
+        // Hide results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!clientSearchModal.contains(e.target) && !clientSearchResultsModal.contains(e.target)) {
+                clientSearchResultsModal.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Set current client name in filter if exists
+    <?php if ($filter_client_id && $userRole !== 'client'): ?>
+    fetch('search_clients.php?id=<?= $filter_client_id ?>')
+        .then(response => response.json())
+        .then(data => {
+            if (data.length > 0) {
+                clientSearch.value = data[0].name;
+            }
+        });
+    <?php endif; ?>
+});
 </script>
 </body>
 </html>
