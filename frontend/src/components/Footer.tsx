@@ -118,7 +118,7 @@ export default function Footer() {
           <ul className="space-y-2">
             <li>
               <Link
-                href="https://vipinformatica.felipepassos.dev/dashboard/login.php"
+                href="https://dashboard.vipltda.com.br/login.php"
                 className="hover:text-gray-800"
               >
                 Minha conta
@@ -126,7 +126,7 @@ export default function Footer() {
             </li>
             <li>
               <Link
-                href="https://vipinformatica.felipepassos.dev/chat"
+                href="https://vipltda.com.br/chat"
                 className="hover:text-gray-800"
               >
                 Atendimento
@@ -152,7 +152,7 @@ export default function Footer() {
         <p className="text-gray-400 text-sm">
           © Todos os direitos reservados. Criado por{" "}
           <Link
-            href="https://felipepassos.dev"
+            href="https://vipltda.com.br"
             className="text-gray-600 hover:text-gray-800"
           >
             Felipe Passos

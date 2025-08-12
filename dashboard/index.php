@@ -359,7 +359,8 @@ $statusMap = [
                     </div>
                     <script>
                         document.addEventListener('DOMContentLoaded', function () {
-                            document.querySelectorAll('form select').forEach(function (select) {
+                            // Aplica auto-submit apenas aos selects do formulário de filtro
+                            document.querySelector('form[method="GET"]').querySelectorAll('select').forEach(function (select) {
                                 select.addEventListener('change', function () {
                                     this.form.submit();
                                 });

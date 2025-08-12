@@ -17,7 +17,7 @@ $requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
 // Configurações de CORS mais seguras
 $allowedOrigins = [
-    'https://vipinformatica.felipepassos.dev',
+    'https://vipltda.com.br',
 ];
 
 $requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';

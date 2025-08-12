@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="relative z-10 min-h-screen flex items-center justify-center">
         <div class="space-y-4">
-            <a href="https://vipinformatica.felipepassos.dev" class="inline-block mb-8 flex justify-center">
+            <a href="https://vipltda.com.br" class="inline-block mb-8 flex justify-center">
                 <img src="./assets/img/logo-2.png" alt="Logo" class="h-16 w-auto hover:opacity-80 transition-opacity" />
             </a>
 
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </form>
             </div>
 
-            <a href="https://vipinformatica.felipepassos.dev/chat"
+            <a href="https://vipltda.com.br/chat"
                 class="text-white font-medium hover:text-gray-200 transition-colors flex m-auto w-fit">
                 O que procura?
             </a>
